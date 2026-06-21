@@ -6,9 +6,8 @@ export const metadata: Metadata = {
   description: "闲暇时刻玩点小游戏",
 };
 
-// SVG icons
 const MicIcon = () => (
-  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
     <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
     <line x1="12" y1="19" x2="12" y2="23" />
@@ -17,7 +16,7 @@ const MicIcon = () => (
 );
 
 const FoodIcon = () => (
-  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
     <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
     <line x1="6" y1="1" x2="6" y2="4" />
@@ -30,46 +29,42 @@ const games = [
   {
     title: "IDOL SIMULATOR",
     subtitle: "韩娱爱豆生活模拟器",
-    desc: "成为一名练习生或出道艺人，经历 28 天的偶像生涯。训练、演出、绯闻、压力——在荣耀与伤痕并存的韩娱世界里走到最后。",
     href: "/games/idol-simulator",
-    color: "from-purple-500/20 to-pink-500/20",
+    color: "from-purple-400/30 to-pink-400/30",
     icon: MicIcon,
-    accent: "text-purple-500",
+    accent: "text-purple-400",
   },
   {
     title: "今天吃什么",
     subtitle: "每日美食抽签器",
-    desc: "不知道吃什么？选好口味偏好，让算法帮你决定。川湘粤菜、日韩东南亚，521 道菜等你翻牌。",
     href: "/games/food",
-    color: "from-orange-500/20 to-yellow-500/20",
+    color: "from-orange-400/30 to-yellow-400/30",
     icon: FoodIcon,
-    accent: "text-orange-500",
+    accent: "text-orange-400",
   },
 ];
 
 export default function GamesPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-[var(--text)] mb-1">小游戏</h1>
-      <p className="text-sm text-[var(--text-muted)] mb-8">闲暇时刻，玩点小游戏</p>
-      <div className="grid gap-6">
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold text-[var(--text)] mb-8 text-center">小游戏</h1>
+      <div className="flex flex-col gap-5">
         {games.map((g) => {
           const Icon = g.icon;
           return (
             <Link
               key={g.href}
               href={g.href}
-              className="group block rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden hover:shadow-lg transition-all hover:-translate-y-0.5"
+              className="group flex items-center gap-5 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
             >
-              <div className={`bg-gradient-to-r ${g.color} p-6 flex items-center justify-center ${g.accent}`}>
+              <div className={`shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br ${g.color} flex items-center justify-center ${g.accent}`}>
                 <Icon />
               </div>
-              <div className="p-5">
-                <h2 className="text-lg font-semibold text-[var(--text)] group-hover:text-[var(--accent-dark)] transition-colors">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text)] group-hover:text-[var(--accent-dark)] transition-colors">
                   {g.title}
                 </h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5 mb-2">{g.subtitle}</p>
-                <p className="text-sm text-[var(--text-muted)] leading-relaxed">{g.desc}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{g.subtitle}</p>
               </div>
             </Link>
           );
