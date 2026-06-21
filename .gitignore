@@ -1,0 +1,17 @@
+node_modules/
+.next/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.local
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+node_modules/
+.next/
+*.db
+*.db-wal
+*.db-shm
+*.tsbuildinfo

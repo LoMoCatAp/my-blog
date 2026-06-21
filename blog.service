@@ -1,0 +1,16 @@
+[Unit]
+Description=My Blog (Next.js)
+After=network.target nginx.service
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/.openclaw/workspace/my-blog
+ExecStart=/usr/bin/npx next start -p 3000
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target

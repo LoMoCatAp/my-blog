@@ -1,0 +1,237 @@
+/* ===== Tailwind ===== */
+@import "tailwindcss";
+
+/* ===== Light Theme (default) ===== */
+:root {
+  --accent: #f97316;
+  --accent-light: #fdba74;
+  --accent-dark: #ea580c;
+  --bg: #fafaf9;
+  --bg-secondary: #f5f5f4;
+  --bg-header: #f0efed;
+  --card: #ffffff;
+  --card-hover: #fef3c7;
+  --text: #1c1917;
+  --text-muted: #78716c;
+  --border: #e7e5e4;
+  --code-bg: #fef3c7;
+  --code-text: #92400e;
+  --pre-bg: #292524;
+  --pre-text: #fafaf9;
+  --shadow: rgba(0, 0, 0, 0.06);
+}
+
+/* ===== Dark Theme ===== */
+html.dark {
+  --accent: #fb923c;
+  --accent-light: #fed7aa;
+  --accent-dark: #fdba74;
+  --bg: #0c0a09;
+  --bg-secondary: #1c1917;
+  --bg-header: #181614;
+  --card: #1c1917;
+  --card-hover: #292524;
+  --text: #fafaf9;
+  --text-muted: #a8a29e;
+  --border: #292524;
+  --code-bg: #3f2e1d;
+  --code-text: #fbbf24;
+  --pre-bg: #1c1917;
+  --pre-text: #fafaf9;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Smooth transitions ===== */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== Body ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* ===== Markdown ===== */
+.prose { max-width: 65ch; line-height: 1.75; }
+.prose h1 { font-size: 2em; font-weight: 700; margin: 1.5em 0 0.5em; }
+.prose h2 { font-size: 1.5em; font-weight: 600; margin: 1.25em 0 0.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.prose h3 { font-size: 1.25em; font-weight: 600; margin: 1em 0 0.5em; }
+.prose p { margin: 0.75em 0; }
+.prose a { color: var(--accent-dark); text-decoration: underline; }
+.prose a:hover { color: var(--accent); }
+.prose ul, .prose ol { margin: 0.5em 0; padding-left: 1.5em; }
+.prose li { margin: 0.25em 0; }
+.prose code { background: var(--code-bg); padding: 0.15em 0.3em; border-radius: 4px; font-size: 0.875em; color: var(--code-text); }
+.prose pre { background: var(--pre-bg); color: var(--pre-text); padding: 1em; border-radius: 8px; overflow-x: auto; margin: 1em 0; }
+.prose pre code { background: none; padding: 0; color: inherit; }
+.prose blockquote { border-left: 4px solid var(--accent-light); padding-left: 1em; color: var(--text-muted); margin: 1em 0; }
+.prose img { max-width: 100%; border-radius: 8px; margin: 1em 0; }
+.prose hr { margin: 2em 0; border-color: var(--border); }
+.prose table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.prose th, .prose td { border: 1px solid var(--border); padding: 0.5em; text-align: left; }
+.prose th { background: var(--card); font-weight: 600; }
+
+/* ===== Cat paw floating animation ===== */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.cat-float { animation: float 3s ease-in-out infinite; }
+.cat-wiggle:hover { animation: wiggle 0.4s ease-in-out; }
+
+/* ===== Cat paw gentle floating ===== */
+@keyframes pawFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+.cat-paw-float {
+html.dark .paw-deco-container svg { filter: opacity(0.5); }
+  animation: pawFloat 4s ease-in-out infinite;
+}
+
+/* ===== Cat paw print decoration ===== */
+.paw-decoration {
+  position: fixed;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: -1;
+  font-size: 80px;
+  user-select: none;
+}
+
+/* ===== Page transition fade ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+main > * {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* ===== Scroll reveal ===== */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== Typing cursor blink ===== */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+/* ===== Card hover glow ===== */
+.card-glow {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px var(--shadow), 0 8px 30px var(--shadow);
+}
+
+/* ===== Pulse ring hover ===== */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+}
+.pulse-hover:hover {
+  animation: pulse-ring 1.5s infinite;
+}
+
+/* ===== Loading spinner ===== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* ===== Floating music player ===== */
+.music-player {
+  position: fixed;
+  z-index: 100;
+}
+
+/* ===== Theme toggle button glow ===== */
+.theme-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+}
+.theme-btn:hover {
+  background: var(--accent-light);
+  color: var(--text);
+}
+
+/* ===== Language button ===== */
+.lang-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.lang-btn:hover {
+  background: var(--accent-light);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ===== Button press effect ===== */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.btn-press:active {
+  transform: scale(0.92);
+}
+
+/* ===== Play button hover glow ===== */
+.play-btn {
+  transition: all 0.15s ease;
+}
+.play-btn:hover {
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+}
+.play-btn:active {
+  transform: scale(0.9);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+}
