@@ -5,6 +5,8 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from "react"
 interface Stats { stamina: number; stress: number; skill: number; popularity: number; loyalty: number; }
 interface GameEvent { title: string; desc: string; options: { label: string; emoji: string; effects: Record<string,number>; text: string }[]; }
 interface LogEntry { day: number; slot: string; text: string; stats: Stats; }
+interface Achievement { id: string; title: string; desc: string; }
+interface ShopItem { id: string; name: string; desc: string; cost: number; effects: Record<string,number>; feedback: string; }
 
 const ACTIVITIES: { id: string; label: string; emoji: string; effects: Record<string,number> }[] = [
   { id:"vocal",     label:"声乐练习",  emoji:"🎤",  effects:{stamina:-15,stress:+8, skill:+5, popularity:+1                              } },
@@ -20,6 +22,8 @@ const ACTIVITIES: { id: string; label: string; emoji: string; effects: Record<st
   { id:"counsel",   label:"心理疏导",  emoji:"🧠",  effects:{stamina:+5, stress:-15,                          loyalty:+1                  } },
   { id:"collab",    label:"合作舞台",  emoji:"🎭",  effects:{stamina:-18,stress:+8, skill:+5, popularity:+6,  loyalty:+2                 } },
 ];
+
+const PRACTICE_IDS = ["vocal","dance","gym","compose"];
 
 const EVENTS: GameEvent[] = [
   { title:"深夜练习室传闻", desc:"有人在匿名社区发帖说看到你深夜独自在练习室……暗示了一些不好的事情。", options:[
@@ -61,6 +65,48 @@ const EVENTS: GameEvent[] = [
   ]},
 ];
 
+const SHOP_ITEMS: ShopItem[] = [
+  { id:"energy",     name:"能量饮料",   desc:"+30 体力",        cost:5,  effects:{stamina:30},                              feedback:"吨吨吨——体力恢复了不少！" },
+  { id:"meditation", name:"冥想课程",   desc:"-20 压力",        cost:3,  effects:{stress:-20},                             feedback:"冥想后感觉内心平静了许多。" },
+  { id:"hashtag",    name:"热搜套餐",   desc:"+15 人气",        cost:8,  effects:{popularity:15},                          feedback:"话题已经安排上了，热搜预定！" },
+  { id:"pr",         name:"公关稿",     desc:"-10 压力 +5 人气", cost:6,  effects:{stress:-10,popularity:5},                feedback:"公关文发出去后风向转好了。" },
+  { id:"coach",      name:"私教课",     desc:"+10 实力",        cost:10, effects:{skill:10},                               feedback:"一对一特训效果显著！" },
+  { id:"gift",       name:"粉丝礼物",   desc:"+10 忠诚度",      cost:7,  effects:{loyalty:10},                             feedback:"礼物发出去后粉丝超开心！" },
+  { id:"skip",       name:"摸鱼券",     desc:"+15 体力 -5 压力", cost:4,  effects:{stamina:15,stress:-5},                   feedback:"摸鱼一时爽，一直摸鱼一直爽。" },
+];
+
+const FAN_LETTERS: { type: "praise"|"critic"|"funny"; text: string }[] = [
+  { type:"praise", text:"欧尼今天舞台太绝了！！我在第一排看得心跳漏拍😭💜" },
+  { type:"praise", text:"哥哥的直拍我循环了100遍，每一秒都是艺术品！" },
+  { type:"praise", text:"今天签售会上你的笑容治愈了我一周的疲惫✨" },
+    { type:"praise", text:"oppa不要太辛苦了，我们会一直支持你的！💪" },
+  { type:"praise", text:"新歌真的好好听，已经设置成闹钟了嘿嘿~" },
+  { type:"critic", text:"现在的实力也能出道？真是刷新了下限。" },
+  { type:"critic", text:"就这？我奶奶跳得都比你好👴" },
+  { type:"critic", text:"一天到晚营销，能不能拿出点真本事？" },
+  { type:"funny",  text:"我在学校模仿你的舞蹈被老师拍了，社死现场😂" },
+  { type:"funny",  text:"我妈说如果你是她女婿就好了——我说我先排队???" },
+  { type:"funny",  text:"今天上课偷偷看你直拍，被老师没收手机了……值了！" },
+  { type:"funny",  text:"为了买你的专辑我吃了两周泡面，现在看到泡面就想吐" },
+  { type:"praise", text:"翻到你练习生时期的视频，真的好努力啊，感动到了🥹" },
+  { type:"praise", text:"你是我追星十年见过最真诚的艺人，没有之一。" },
+];
+
+const SNS_POSTS: { type: "fan"|"neutral"|"hate"; text: string }[] = [
+  { type:"fan",     text:"【热帖】这姐/哥的ending妖精太绝了，谁截图了？？🔥" },
+  { type:"fan",     text:"今日份路拍——下班后还给粉丝签名，爱了爱了❤️" },
+  { type:"neutral", text:"路人说一句，最近这个团回归曲确实有点上头。" },
+  { type:"neutral", text:"刷到直拍推荐，点进去看了三分钟……行吧我承认了。" },
+  { type:"neutral", text:"不太了解但是首页全是ta，到底发生了什么？" },
+  { type:"hate",    text:"油管上有分析视频说ta假唱，好尴尬啊……" },
+  { type:"hate",    text:"粉丝控评太烦了，屏蔽都屏蔽不完🙄" },
+  { type:"fan",     text:"今天生咖的布置也太用心了吧！！粉丝用心了！" },
+  { type:"fan",     text:"这个ending镜头我截图当壁纸了，美得不像真人" },
+  { type:"neutral", text:"刚看完打歌舞台，舞蹈确实齐，但主唱声音有点不稳。" },
+  { type:"hate",    text:"听说是靠关系进公司的？难怪实力这么拉跨。" },
+  { type:"fan",     text:"今天和粉丝拍了合照还说了'我爱你'，我原地去世了💀" },
+];
+
 const FAMOUS = ["金泰亨","田柾国","朴智旻","金硕珍","闵玧其","郑号锡","金南俊","LISA","JENNIE","ROSÉ","JISOO","李马克","黄仁俊","李帝努","李楷灿","罗渽民","朴志晟","张元英","安宥真","KARINA","WINTER","宁艺卓","GISELLE","崔然竣","崔秀彬","崔范奎","姜太显","休宁凯","SANA","MINA","周子瑜","林娜琏","朴志效","金多贤","边伯贤","朴灿烈","金钟仁","都暻秀","吴世勋","方灿","李旻浩","徐彰彬","黄铉辰","韩知城","金昇玟","MINJI","HANNI","DANIELLE","HAERIN","HYEIN","金采源","宫脇咲良","许允真","中村一叶","洪恩採"];
 const GROUPS = ["BTS","BLACKPINK","NCT DREAM","IVE","aespa","TOMORROW X TOGETHER","TWICE","EXO","SEVENTEEN","Stray Kids","ITZY","NewJeans","LE SSERAFIM","ENHYPEN","BABYMONSTER","RIIZE","ZEROBASEONE"];
 
@@ -69,6 +115,35 @@ const PARTICLE_COLORS = ["#a855f7","#ec4899","#eab308","#22c55e","#3b82f6","#f97
 function shuffle<T>(a: T[]): T[] { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]} return b; }
 function pick<T>(a: T[]): T { return a[Math.floor(Math.random()*a.length)]; }
 function clamp(v: number, mn=0, mx=100): number { return Math.max(mn,Math.min(mx,v)); }
+
+// ─── ACHIEVEMENT CONSTANTS ────────────────────────────────────────────
+const ACHIEVEMENT_DEFS: Achievement[] = [
+  { id:"first_try",       title:"初次尝试",       desc:"完成第一个选择" },
+  { id:"practice_fiend",  title:"练习狂魔",       desc:"连续5次练习类活动" },
+  { id:"iron_man",        title:"铁人",           desc:"7天不选休息" },
+  { id:"overachiever",    title:"卷王",           desc:"连续10天不选休息（铁人升级版）" },
+  { id:"slacker",         title:"鸽子精",         desc:"连续2天全休息" },
+  { id:"lying_flat",      title:"躺平大师",       desc:"连续3天全休息" },
+  { id:"social_phobia",   title:"社恐",           desc:"拒绝3次综艺邀约" },
+  { id:"gossip_girl",     title:"吃瓜群众",       desc:"触发10次事件" },
+  { id:"hot_search",      title:"热搜体质",       desc:"一天内触发3个事件" },
+  { id:"public_enemy",    title:"全网黑",         desc:"一天内触发2次恶评" },
+  { id:"glass_heart",     title:"玻璃心",         desc:"压力>80时连续休息3次" },
+  { id:"miserable_end",   title:"惨淡收场",       desc:"结局时实力<15" },
+  { id:"chosen_one",      title:"天选之人",       desc:"第一次玩就拿到大赏新人结局" },
+  { id:"balance_master",  title:"端水大师",       desc:"所有属性都在35-65之间结束" },
+  { id:"lone_warrior",    title:"孤勇者",         desc:"体力<=5时存活超过3天" },
+  { id:"fan_reaper",      title:"粉丝收割机",     desc:"忠诚度90+" },
+  { id:"topic_king",      title:"话题之王",       desc:"人气峰值90+" },
+  { id:"breakdown_edge",  title:"崩溃边缘",       desc:"压力达到99或100" },
+  { id:"social_butterfly",title:"社交达人",       desc:"触发5次SNS/粉丝活动" },
+  { id:"all_rounder",     title:"全能艺人",       desc:"skill+popularity+loyalty总和200+" },
+  { id:"whale",           title:"氪金玩家",       desc:"商店买5次物品" },
+  { id:"shopaholic",      title:"剁手党",         desc:"商店买10次物品" },
+  { id:"sweatshop",       title:"血汗工厂",       desc:"体力连续3天低于20" },
+  { id:"lopsided",        title:"偏科生",         desc:"一项属性>=80，一项<=10" },
+  { id:"ace",             title:"ACE",            desc:"所有属性>=60" },
+];
 
 // ─── Particle ─────────────────────────────────────────────────────────
 function Particles() {
@@ -110,7 +185,6 @@ function Particles() {
 }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────
-// Using only SVGs for activity buttons; games page can keep emojis
 const SVGS: Record<string,()=>React.ReactNode> = {
   vocal: ()=><svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeLinecap="round"><circle cx="14" cy="14" r="10"/><path d="M10 13c1 2 2 3.5 4 3.5s3-1.5 4-3.5"/><circle cx="10" cy="11" r="1" fill="#a855f7"/><circle cx="18" cy="11" r="1" fill="#a855f7"/></svg>,
   dance: ()=><svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="#ec4899" strokeWidth="1.5" strokeLinecap="round"><circle cx="14" cy="6" r="3"/><path d="M8 24l3-7 5 2 4-5"/><path d="M11 17l-3 7"/></svg>,
@@ -145,6 +219,60 @@ export default function IdolSimulator() {
   const [combo, setCombo] = useState(0);
   const [eventFlash, setEventFlash] = useState(false);
 
+  // ── New System States ──
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
+  const [achieveNotif, setAchieveNotif] = useState<{title:string;id:string}|null>(null);
+  const [showDailySummary, setShowDailySummary] = useState(false);
+  const [showShop, setShowShop] = useState(false);
+  const [shopMsg, setShopMsg] = useState("");
+  const [fanMsg, setFanMsg] = useState<{type:"fan_letter"|"sns";subtype:string;text:string}|null>(null);
+
+  // ── Achievement Tracking Refs ──
+  const track = useRef({
+    consecutivePractice: 0,
+    consecutiveAllRestDays: 0,
+    consecutiveNoRestDays: 0,
+    consecutiveRestUnderStress: 0,
+    eventsTriggered: 0,
+    dayEventCount: 0,
+    dayEvilCount: 0,
+    peakPopularity: 10,
+    peakStress: 0,
+    snsRelatedActions: 0,
+    varietyDeclines: 0,
+    lowStaminaStreak: 0,
+    purchaseCount: 0,
+    totalActions: 0,
+    isFirstGame: true,
+    dayActivities: [] as {id:string;label:string}[],
+    dayStatus: "good" as "good"|"bad"|"mixed"|"lazy",
+    daysSurvivedLowSta: 0,
+  });
+
+  // Reset tracking on game start
+  const resetTracking = useCallback(() => {
+    track.current = {
+      consecutivePractice: 0,
+      consecutiveAllRestDays: 0,
+      consecutiveNoRestDays: 0,
+      consecutiveRestUnderStress: 0,
+      eventsTriggered: 0,
+      dayEventCount: 0,
+      dayEvilCount: 0,
+      peakPopularity: 10,
+      peakStress: 0,
+      snsRelatedActions: 0,
+      varietyDeclines: 0,
+      lowStaminaStreak: 0,
+      purchaseCount: 0,
+      totalActions: 0,
+      isFirstGame: track.current.isFirstGame,
+      dayActivities: [],
+      dayStatus: "good",
+      daysSurvivedLowSta: 0,
+    };
+  }, []);
+
   const slotLabel = ["上午","下午","晚上"][slot];
   const isNight = slot === 2;
   const stressBlink = stats.stress > 75;
@@ -156,14 +284,121 @@ export default function IdolSimulator() {
     }
   }, [phase]);
 
+  // ── Achievement Notification Timer ──
+  useEffect(() => {
+    if (!achieveNotif) return;
+    const t = setTimeout(() => setAchieveNotif(null), 3000);
+    return () => clearTimeout(t);
+  }, [achieveNotif]);
+
+  // ── Fan Message Timer ──
+  useEffect(() => {
+    if (!fanMsg) return;
+    const t = setTimeout(() => setFanMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [fanMsg]);
+
+  // ── Achievement Checking ──
+  const checkAchievements = useCallback((currentStats: Stats, ending?: {title:string}) => {
+    const tr = track.current;
+    const newUnlocks: string[] = [];
+
+    const tryUnlock = (id: string) => {
+      if (!unlockedAchievements.includes(id)) newUnlocks.push(id);
+    };
+
+    // 1. 初次尝试
+    if (tr.totalActions >= 1) tryUnlock("first_try");
+    // 2. 练习狂魔
+    if (tr.consecutivePractice >= 5) tryUnlock("practice_fiend");
+    // 3. 铁人
+    if (tr.consecutiveNoRestDays >= 7) tryUnlock("iron_man");
+    // 4. 卷王
+    if (tr.consecutiveNoRestDays >= 10) tryUnlock("overachiever");
+    // 5. 鸽子精
+    if (tr.consecutiveAllRestDays >= 2) tryUnlock("slacker");
+    // 6. 躺平大师
+    if (tr.consecutiveAllRestDays >= 3) tryUnlock("lying_flat");
+    // 7. 社恐
+    if (tr.varietyDeclines >= 3) tryUnlock("social_phobia");
+    // 8. 吃瓜群众
+    if (tr.eventsTriggered >= 10) tryUnlock("gossip_girl");
+    // 9. 热搜体质
+    if (tr.dayEventCount >= 3) tryUnlock("hot_search");
+    // 10. 全网黑
+    if (tr.dayEvilCount >= 2) tryUnlock("public_enemy");
+    // 11. 玻璃心
+    if (tr.consecutiveRestUnderStress >= 3) tryUnlock("glass_heart");
+    // 15. 孤勇者
+    if (tr.daysSurvivedLowSta >= 3) tryUnlock("lone_warrior");
+    // 16. 粉丝收割机
+    if (currentStats.loyalty >= 90) tryUnlock("fan_reaper");
+    // 17. 话题之王
+    if (tr.peakPopularity >= 90) tryUnlock("topic_king");
+    // 18. 崩溃边缘
+    if (tr.peakStress >= 99) tryUnlock("breakdown_edge");
+    // 19. 社交达人
+    if (tr.snsRelatedActions >= 5) tryUnlock("social_butterfly");
+    // 21. 氪金玩家
+    if (tr.purchaseCount >= 5) tryUnlock("whale");
+    // 22. 剁手党
+    if (tr.purchaseCount >= 10) tryUnlock("shopaholic");
+    // 23. 血汗工厂
+    if (tr.lowStaminaStreak >= 3) tryUnlock("sweatshop");
+
+    // End-game only checks
+    if (ending) {
+      // 12. 惨淡收场
+      if (currentStats.skill < 15) tryUnlock("miserable_end");
+      // 13. 天选之人
+      if (ending.title === "大赏新人" && tr.isFirstGame) tryUnlock("chosen_one");
+      // 14. 端水大师
+      const allInRange = currentStats.stamina >= 35 && currentStats.stamina <= 65 &&
+        currentStats.stress >= 35 && currentStats.stress <= 65 &&
+        currentStats.skill >= 35 && currentStats.skill <= 65 &&
+        currentStats.popularity >= 35 && currentStats.popularity <= 65 &&
+        currentStats.loyalty >= 35 && currentStats.loyalty <= 65;
+      if (allInRange) tryUnlock("balance_master");
+      // 20. 全能艺人
+      if (currentStats.skill + currentStats.popularity + currentStats.loyalty >= 200) tryUnlock("all_rounder");
+      // 24. 偏科生
+      const vals = [currentStats.stamina, currentStats.stress, currentStats.skill, currentStats.popularity, currentStats.loyalty];
+      const hasHigh = vals.some(v => v >= 80);
+      const hasLow = vals.some(v => v <= 10);
+      if (hasHigh && hasLow) tryUnlock("lopsided");
+      // 25. ACE
+      if (currentStats.stamina >= 60 && currentStats.stress >= 60 &&
+          currentStats.skill >= 60 && currentStats.popularity >= 60 &&
+          currentStats.loyalty >= 60) tryUnlock("ace");
+    }
+
+    if (newUnlocks.length > 0) {
+      setUnlockedAchievements(prev => [...prev, ...newUnlocks]);
+      // Show notification for first new achievement
+      const def = ACHIEVEMENT_DEFS.find(d => d.id === newUnlocks[0]);
+      if (def) setAchieveNotif({title: def.title, id: def.id});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlockedAchievements]);
+
   function advance() {
     if (slot >= 2) {
-      if (day >= 28) { setTimeout(() => setShowEnd(true), 500); }
-      setSlot(0);
-      setDay(d => d + 1);
+      if (day >= 28) { setTimeout(() => setShowEnd(true), 500); return; }
+      setShowDailySummary(true);
     } else {
       setSlot(s => s + 1);
     }
+  }
+
+  function dismissDailySummary() {
+    setShowDailySummary(false);
+    // Reset daily tracking
+    track.current.dayActivities = [];
+    track.current.dayEventCount = 0;
+    track.current.dayEvilCount = 0;
+    setDay(d => d + 1);
+    setSlot(0);
+    // Capture start-of-day stats for next summary
   }
 
   function apply(effects: Record<string,number>, text: string) {
@@ -174,11 +409,23 @@ export default function IdolSimulator() {
       popularity: clamp(stats.popularity + (effects.popularity || 0)),
       loyalty: clamp(stats.loyalty + (effects.loyalty || 0)),
     };
+
+    // Update peak tracking
+    if (updated.popularity > track.current.peakPopularity) track.current.peakPopularity = updated.popularity;
+    if (updated.stress > track.current.peakStress) track.current.peakStress = updated.stress;
+
+    // Low stamina survival tracking
+    if (updated.stamina <= 5 && stats.stamina > 5) {
+      // Just dropped to low stamina
+    }
+    if (updated.stamina <= 5) {
+      track.current.daysSurvivedLowSta = Math.max(track.current.daysSurvivedLowSta, day);
+    }
+
     setStats(updated);
     setMsg(text);
     setLog(prev => [...prev, {day,slot:slotLabel,text,stats:updated}]);
 
-    // Flash effects for specific stat changes
     const flashParts: string[] = [];
     if ((effects.stamina||0) < 0) flashParts.push("stamina");
     if ((effects.stress||0) > 0) flashParts.push("stress");
@@ -187,7 +434,6 @@ export default function IdolSimulator() {
     if (flashParts.length) setFlash(flashParts[0]);
     setTimeout(() => setFlash(null), 600);
 
-    // Game over check
     if (updated.stamina <= 0 || updated.stress >= 100) {
       setTimeout(() => setShowEnd(true), 800);
     }
@@ -196,19 +442,125 @@ export default function IdolSimulator() {
   function doActivity(a: typeof ACTIVITIES[0]) {
     if (showEnd) return;
     setCombo(c => Math.min(c + 1, 10));
+
+    // Track activity for daily summary
+    track.current.dayActivities.push({id:a.id, label:a.label});
+
+    // ── Achievement tracking ──
+    track.current.totalActions++;
+    const isPractice = PRACTICE_IDS.includes(a.id);
+    const isSnsRelated = a.id === "sns" || a.id === "fanmeet" || a.id === "collab";
+    if (isPractice) {
+      track.current.consecutivePractice++;
+    } else {
+      track.current.consecutivePractice = 0;
+    }
+    if (isSnsRelated) {
+      track.current.snsRelatedActions++;
+    }
+
+    // Rest tracking for consecutive rest days & stress rest
+    if (a.id === "rest") {
+      if (stats.stress > 80) {
+        track.current.consecutiveRestUnderStress++;
+      } else {
+        track.current.consecutiveRestUnderStress = 0;
+      }
+    } else {
+      track.current.consecutiveRestUnderStress = 0;
+    }
+
+    // Check for event trigger
     if (Math.random() < 0.25) {
-      setCurrentEvent(pick(EVENTS));
+      const evt = pick(EVENTS);
+      setCurrentEvent(evt);
       setEventFlash(true);
       setTimeout(() => setEventFlash(false), 300);
+
+      // Track event for achievements
+      track.current.eventsTriggered++;
+      track.current.dayEventCount++;
+      if (evt.title === "恶评爆发") {
+        track.current.dayEvilCount++;
+      }
+      // Check achievements after event trigger
+      checkAchievements(stats);
       return;
     }
-    apply(a.effects, a.label);
+
+    // Calculate updated stats before applying
+    const updated: Stats = {
+      stamina: clamp(stats.stamina + (a.effects.stamina || 0)),
+      stress: clamp(stats.stress + (a.effects.stress || 0)),
+      skill: clamp(stats.skill + (a.effects.skill || 0)),
+      popularity: clamp(stats.popularity + (a.effects.popularity || 0)),
+      loyalty: clamp(stats.loyalty + (a.effects.loyalty || 0)),
+    };
+
+    // ── Fan message / SNS post (15-20% chance) ──
+    let fanStressBonus = 0;
+    if (Math.random() < 0.18) {
+      if (Math.random() < 0.5) {
+        const letter = pick(FAN_LETTERS);
+        setFanMsg({type:"fan_letter", subtype:letter.type, text:letter.text});
+        if (letter.type === "critic" && Math.random() < 0.5) {
+          fanStressBonus = 2;
+        }
+      } else {
+        const sns = pick(SNS_POSTS);
+        setFanMsg({type:"sns", subtype:sns.type, text:sns.text});
+        if (sns.type === "hate" && Math.random() < 0.5) {
+          fanStressBonus = 3;
+        }
+      }
+    }
+
+    // Apply everything at once
+    const finalStats: Stats = {
+      ...updated,
+      stress: clamp(updated.stress + fanStressBonus),
+    };
+
+    // Update peak tracking
+    if (finalStats.popularity > track.current.peakPopularity) track.current.peakPopularity = finalStats.popularity;
+    if (finalStats.stress > track.current.peakStress) track.current.peakStress = finalStats.stress;
+    if (finalStats.stamina <= 5) {
+      track.current.daysSurvivedLowSta = Math.max(track.current.daysSurvivedLowSta, day);
+    }
+
+    setStats(finalStats);
+
+    const actionText = a.label + (fanStressBonus > 0 ? "\n(收到了一些不友善的评论…)" : "");
+    setMsg(actionText);
+    setLog(prev => [...prev, {day,slot:slotLabel,text:actionText,stats:finalStats}]);
+
+    const flashParts: string[] = [];
+    if ((a.effects.stamina||0) < 0) flashParts.push("stamina");
+    if ((a.effects.stress||0) > 0) flashParts.push("stress");
+    if ((a.effects.popularity||0) > 0) flashParts.push("popularity");
+    if ((a.effects.skill||0) > 0) flashParts.push("skill");
+    if (flashParts.length) setFlash(flashParts[0]);
+    setTimeout(() => setFlash(null), 600);
+
+    if (finalStats.stamina <= 0 || finalStats.stress >= 100) {
+      setTimeout(() => setShowEnd(true), 800);
+    }
+
+    // Check achievements
+    checkAchievements(finalStats);
+
     advance();
   }
 
   function handleEvent(i: number) {
     if (!currentEvent) return;
     const opt = currentEvent.options[i];
+
+    // Track variety declines
+    if (currentEvent.title === "综艺邀约" && i === 1) {
+      track.current.varietyDeclines++;
+    }
+
     apply(opt.effects, currentEvent.title + "：\n" + opt.text);
     setCurrentEvent(null);
     advance();
@@ -221,8 +573,68 @@ export default function IdolSimulator() {
     setCharGroup(pick(GROUPS));
     setStats({stamina:100,stress:0,skill:20,popularity:10,loyalty:5});
     setDay(1); setSlot(0); setLog([]); setCurrentEvent(null); setMsg(""); setShowEnd(false); setCombo(0);
+    setShowDailySummary(false);
+    setShowShop(false);
+    setShopMsg("");
+    setFanMsg(null);
+    setAchieveNotif(null);
+    setUnlockedAchievements([]);
+    resetTracking();
     setPhase("play");
   }
+
+  // ── Shop Functions ──
+  function buyItem(item: ShopItem) {
+    if (stats.popularity < item.cost) {
+      setShopMsg(`人气不够！需要 ${item.cost} 点人气，当前只有 ${stats.popularity} 😅`);
+      return;
+    }
+    setStats(prev => ({
+      ...prev,
+      popularity: clamp(prev.popularity - item.cost),
+      stamina: clamp(prev.stamina + (item.effects.stamina || 0)),
+      stress: clamp(prev.stress + (item.effects.stress || 0)),
+      skill: clamp(prev.skill + (item.effects.skill || 0)),
+      loyalty: clamp(prev.loyalty + (item.effects.loyalty || 0)),
+    }));
+    track.current.purchaseCount++;
+    setShopMsg(item.feedback);
+    checkAchievements({
+      ...stats,
+      popularity: clamp(stats.popularity - item.cost),
+      stamina: clamp(stats.stamina + (item.effects.stamina || 0)),
+      stress: clamp(stats.stress + (item.effects.stress || 0)),
+      skill: clamp(stats.skill + (item.effects.skill || 0)),
+      loyalty: clamp(stats.loyalty + (item.effects.loyalty || 0)),
+    });
+  }
+
+  // ── Daily Summary Evaluation ──
+  function getDailyMood(): {emoji:string;text:string} {
+    const tr = track.current;
+    if (tr.dayActivities.length === 0) return {emoji:"😴", text:"摸鱼的一天——什么都没干。"};
+    const hasRest = tr.dayActivities.some(a => a.id === "rest" || a.id === "hospital" || a.id === "counsel");
+    const hasWork = tr.dayActivities.some(a => !["rest","hospital","counsel"].includes(a.id));
+    const stressHigh = stats.stress > 70;
+    const staminaLow = stats.stamina < 20;
+
+    if (stressHigh && staminaLow) return {emoji:"😰", text:"今天太拼了，身体和心灵都在抗议……"};
+    if (stressHigh) return {emoji:"😬", text:"压力值爆表，急需休息调整。"};
+    if (tr.dayActivities.every(a => a.id === "rest")) return {emoji:"🛌", text:"今天除了休息还是休息。偶尔也需要躺平。"};
+    if (hasRest && hasWork) return {emoji:"👍", text:"劳逸结合，今天过得不错！"};
+    if (hasWork && !hasRest && tr.dayActivities.length >= 3) return {emoji:"💪", text:"满满当当的一天，勤奋得让人感动！"};
+    if (hasWork) return {emoji:"✨", text:"今天也努力了，离梦想又近了一步。"};
+    return {emoji:"🤔", text:"平平淡淡的一天。"};
+  }
+
+  function getDailyStatChanges(): {name:string;diff:number;color:string}[] {
+    const changes: {name:string;diff:number;color:string}[] = [];
+    const tr = track.current;
+    return changes;
+  }
+
+  // Track day activities for low stamina streak at end of day
+  // This is checked after dismissDailySummary via checkAchievements
 
   const ending = useMemo(() => {
     const s=stats;
@@ -235,8 +647,16 @@ export default function IdolSimulator() {
     return {title:"平凡毕业",desc:"没有大风大浪没有闪耀时刻。但坚持本身就是胜利。",c:"#64748b"};
   },[stats]);
 
+  // Run end-game achievements when ending screen appears
+  useEffect(() => {
+    if (showEnd) {
+      checkAchievements(stats, ending);
+      track.current.isFirstGame = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEnd]);
+
   // ── Styling ──
-  const isDark = true; // Always dark theme for idol simulator, full-screen
   const tc = (alpha: string) => `rgba(255,255,255,${alpha})`;
 
   const btnStyle: React.CSSProperties = {
@@ -303,41 +723,62 @@ export default function IdolSimulator() {
   );
 
   // ── End ──
-  if (showEnd) return (
-    <div style={{position:"fixed",inset:0,overflow:"auto",background:"linear-gradient(135deg,#0a0a1a,#1a0a2e,#0d0d2b)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
-      <Particles />
-      <div style={{maxWidth:400,width:"100%",background:"rgba(255,255,255,0.08)",backdropFilter:"blur(24px)",borderRadius:24,padding:32,margin:16,border:"1px solid rgba(255,255,255,0.12)",position:"relative",zIndex:1}}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:40,marginBottom:8}}>🎬</div>
-          <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>偶像生涯结局</div>
-          <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{charName} · {charGroup}</div>
-        </div>
-        <div style={{fontSize:22,fontWeight:800,textAlign:"center",color:ending.c,marginBottom:8,borderBottom:`2px solid ${ending.c}40`,paddingBottom:12,display:"inline-block",width:"100%"}}>{ending.title}</div>
-        <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",textAlign:"center",marginBottom:24,marginTop:12,lineHeight:1.6}}>{ending.desc}</div>
-        <div style={{background:"rgba(255,255,255,0.05)",borderRadius:16,padding:16,marginBottom:24}}>
-          {[
-            {l:"最终实力",v:stats.skill,c:"#3b82f6"},
-            {l:"最高人气",v:stats.popularity,c:"#eab308"},
-            {l:"粉丝忠诚度",v:stats.loyalty,c:"#ec4899"},
-            {l:"体力余量",v:stats.stamina,c:"#22c55e"},
-            {l:"最终压力",v:stats.stress,c:"#ef4444"},
-          ].map((x,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,padding:"5px 0"}}>
-              <span style={{color:"rgba(255,255,255,0.4)"}}>{x.l}</span>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:60,height:4,borderRadius:2,background:"rgba(255,255,255,0.1)",overflow:"hidden"}}>
-                  <div style={{height:"100%",borderRadius:2,background:x.c,width:Math.min(x.v,100)+"%"}} />
+  if (showEnd) {
+    const unlockedList = ACHIEVEMENT_DEFS.filter(a => unlockedAchievements.includes(a.id));
+    return (
+      <div style={{position:"fixed",inset:0,overflow:"auto",background:"linear-gradient(135deg,#0a0a1a,#1a0a2e,#0d0d2b)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+        <Particles />
+        <div style={{maxWidth:400,width:"100%",background:"rgba(255,255,255,0.08)",backdropFilter:"blur(24px)",borderRadius:24,padding:32,margin:16,border:"1px solid rgba(255,255,255,0.12)",position:"relative",zIndex:1}}>
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <div style={{fontSize:40,marginBottom:8}}>🎬</div>
+            <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>偶像生涯结局</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{charName} · {charGroup}</div>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,textAlign:"center",color:ending.c,marginBottom:8,borderBottom:`2px solid ${ending.c}40`,paddingBottom:12,display:"inline-block",width:"100%"}}>{ending.title}</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",textAlign:"center",marginBottom:24,marginTop:12,lineHeight:1.6}}>{ending.desc}</div>
+          <div style={{background:"rgba(255,255,255,0.05)",borderRadius:16,padding:16,marginBottom:24}}>
+            {[
+              {l:"最终实力",v:stats.skill,c:"#3b82f6"},
+              {l:"最高人气",v:stats.popularity,c:"#eab308"},
+              {l:"粉丝忠诚度",v:stats.loyalty,c:"#ec4899"},
+              {l:"体力余量",v:stats.stamina,c:"#22c55e"},
+              {l:"最终压力",v:stats.stress,c:"#ef4444"},
+            ].map((x,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,padding:"5px 0"}}>
+                <span style={{color:"rgba(255,255,255,0.4)"}}>{x.l}</span>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:60,height:4,borderRadius:2,background:"rgba(255,255,255,0.1)",overflow:"hidden"}}>
+                    <div style={{height:"100%",borderRadius:2,background:x.c,width:Math.min(x.v,100)+"%"}} />
+                  </div>
+                  <span style={{color:"#fff",fontWeight:700,width:24,textAlign:"right"}}>{x.v}</span>
                 </div>
-                <span style={{color:"#fff",fontWeight:700,width:24,textAlign:"right"}}>{x.v}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Achievements Display ── */}
+          {unlockedList.length > 0 && (
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#eab308",marginBottom:10,textAlign:"center"}}>
+                🏅 已解锁成就 ({unlockedList.length}/{ACHIEVEMENT_DEFS.length})
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {unlockedList.map(a => (
+                  <div key={a.id} style={{borderRadius:10,padding:"6px 12px",background:"rgba(234,179,8,0.08)",border:"1px solid rgba(234,179,8,0.15)",fontSize:12}}>
+                    <span style={{color:"#eab308",fontWeight:600}}>🏅 {a.title}</span>
+                    <span style={{color:"rgba(255,255,255,0.5)",marginLeft:8}}>{a.desc}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          <button onClick={()=>setPhase("create")}
+            style={{width:"100%",padding:"12px 0",borderRadius:12,border:"none",textAlign:"center",background:"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>🔄 再来一次</button>
         </div>
-        <button onClick={()=>setPhase("create")}
-          style={{width:"100%",padding:"12px 0",borderRadius:12,border:"none",textAlign:"center",background:"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>🔄 再来一次</button>
       </div>
-    </div>
-  );
+    );
+  }
 
   // ── Play ──
   const bg = isNight
@@ -351,116 +792,289 @@ export default function IdolSimulator() {
       {eventFlash && <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:1,background:"radial-gradient(ellipse at center,rgba(168,85,247,0.15),transparent 60%)",animation:"pulseEvent 0.3s ease-out"}} />}
 
       <div style={{maxWidth:420,margin:"0 auto",padding:"16px 16px 32px",position:"relative",zIndex:2}}>
-        {/* Back */}
-        <a href="/games" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12,color:"rgba(255,255,255,0.4)",textDecoration:"none",marginBottom:8,padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,0.05)"}}>← 返回小游戏</a>
-
-        {/* Status card */}
-        <div style={{borderRadius:20,padding:20,background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.08)",marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-            <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,#a855f7,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 15c1 1.5 2.5 2.5 4 2.5s3-1 4-2.5"/><circle cx="9" cy="10" r="1.5" fill="#fff"/><circle cx="15" cy="10" r="1.5" fill="#fff"/></svg>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{charName}</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>{charGroup}</div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>Day {day}/28</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:600}}>{slotLabel}</div>
-            </div>
+        {/* Achievement Notification */}
+        {achieveNotif && (
+          <div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:10000,
+            background:"linear-gradient(135deg,rgba(234,179,8,0.2),rgba(168,85,247,0.2))",
+            backdropFilter:"blur(20px)",borderRadius:16,padding:"12px 24px",
+            border:"1px solid rgba(234,179,8,0.4)",animation:"fadeSlide 0.3s ease-out",
+            textAlign:"center"}}>
+            <div style={{fontSize:24,marginBottom:2}}>🏅</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#eab308"}}>成就解锁！</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,0.85)",marginTop:2}}>{achieveNotif.title}</div>
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:3}}>
-            {[
-              ["体力", stats.stamina, "#22c55e", false],
-              ["压力", stats.stress, "#ef4444", true],
-              ["实力", stats.skill, "#3b82f6", false],
-              ["人气", stats.popularity, "#eab308", false],
-              ["忠诚度", stats.loyalty, "#ec4899", false],
-            ].map((x:any,i)=>{
-              const pct = x[3] ? 100-x[1] : x[1];
-              const isFlash = flash === ["stamina","stress","skill","popularity","loyalty"][i];
-              return (
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
-                  <span style={{width:48,color:"rgba(255,255,255,0.4)",whiteSpace:"nowrap"}}>{x[0]}</span>
-                  <div style={{flex:1,height:7,borderRadius:4,background:"rgba(255,255,255,0.06)",overflow:"hidden"}}>
-                    <div style={{height:"100%",borderRadius:4,background:x[2],width:pct+"%",transition:"width 0.5s ease",opacity:isFlash?0.6:1}} />
+        )}
+
+        {!showDailySummary && !showShop && (
+          <>
+            {/* Back */}
+            <a href="/games" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:12,color:"rgba(255,255,255,0.4)",textDecoration:"none",marginBottom:8,padding:"4px 10px",borderRadius:8,background:"rgba(255,255,255,0.05)"}}>← 返回小游戏</a>
+
+            {/* Status card */}
+            <div style={{borderRadius:20,padding:20,background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.08)",marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,#a855f7,#ec4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 15c1 1.5 2.5 2.5 4 2.5s3-1 4-2.5"/><circle cx="9" cy="10" r="1.5" fill="#fff"/><circle cx="15" cy="10" r="1.5" fill="#fff"/></svg>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>{charName}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>{charGroup}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>Day {day}/28</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:600}}>{slotLabel}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {[
+                  ["体力", stats.stamina, "#22c55e", false],
+                  ["压力", stats.stress, "#ef4444", true],
+                  ["实力", stats.skill, "#3b82f6", false],
+                  ["人气", stats.popularity, "#eab308", false],
+                  ["忠诚度", stats.loyalty, "#ec4899", false],
+                ].map((x:any,i)=>{
+                  const pct = x[3] ? 100-x[1] : x[1];
+                  const isFlash = flash === ["stamina","stress","skill","popularity","loyalty"][i];
+                  return (
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                      <span style={{width:48,color:"rgba(255,255,255,0.4)",whiteSpace:"nowrap"}}>{x[0]}</span>
+                      <div style={{flex:1,height:7,borderRadius:4,background:"rgba(255,255,255,0.06)",overflow:"hidden"}}>
+                        <div style={{height:"100%",borderRadius:4,background:x[2],width:pct+"%",transition:"width 0.5s ease",opacity:isFlash?0.6:1}} />
+                      </div>
+                      <span style={{width:22,textAlign:"right",color:isFlash?x[2]:"rgba(255,255,255,0.5)",fontWeight:isFlash?700:600,transition:"all 0.3s"}}>{x[1]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {combo >= 3 && (
+                <div style={{textAlign:"center",marginTop:8,fontSize:11,color:"#eab308",fontWeight:600,animation:"fadeIn 0.3s"}}>
+                  🔥 {combo} 连击！保持状态
+                </div>
+              )}
+            </div>
+
+            {/* Message */}
+            {msg && (
+              <div style={{borderRadius:12,padding:"10px 14px",background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.08)",marginBottom:12,fontSize:13,color:"rgba(255,255,255,0.85)",whiteSpace:"pre-line",animation:"fadeSlide 0.3s ease-out",lineHeight:1.5}}>
+                {msg}
+              </div>
+            )}
+
+            {/* Fan Message / SNS Post */}
+            {fanMsg && (
+              <div style={{borderRadius:12,padding:"10px 14px",backdropFilter:"blur(16px)",marginBottom:12,fontSize:12,lineHeight:1.5,animation:"fadeSlide 0.3s ease-out",
+                border: fanMsg.subtype === "critic" || fanMsg.subtype === "hate" ? "1px solid rgba(239,68,68,0.4)" :
+                        fanMsg.type === "sns" ? "1px solid rgba(59,130,246,0.4)" :
+                        "1px solid rgba(236,72,153,0.4)",
+                background: fanMsg.subtype === "critic" || fanMsg.subtype === "hate" ? "rgba(239,68,68,0.06)" :
+                           fanMsg.type === "sns" ? "rgba(59,130,246,0.06)" :
+                           "rgba(236,72,153,0.06)",
+              }}>
+                <div style={{fontSize:10,fontWeight:600,marginBottom:3,
+                  color: fanMsg.subtype === "critic" || fanMsg.subtype === "hate" ? "#ef4444" :
+                         fanMsg.type === "sns" ? "#3b82f6" : "#ec4899"
+                }}>
+                  {fanMsg.type === "sns" ? "🌐 SNS 动态" : fanMsg.subtype === "critic" ? "💬 恶评" : "💌 粉丝来信"}
+                </div>
+                <div style={{color:"rgba(255,255,255,0.8)"}}>{fanMsg.text}</div>
+              </div>
+            )}
+
+            {/* Event */}
+            {currentEvent ? (
+              <div style={{borderRadius:20,padding:20,background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(168,85,247,0.3)",animation:"fadeSlide 0.3s ease-out"}}>
+                <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round"><circle cx="10" cy="10" r="8"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13" x2="10.01" y2="13"/></svg>
+                  {currentEvent.title}
+                </div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:16,lineHeight:1.6}}>{currentEvent.desc}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {currentEvent.options.map((o,i)=>(
+                    <button key={i} onClick={()=>handleEvent(i)}
+                      style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,color:"#fff",cursor:"pointer",background:"rgba(255,255,255,0.05)",textAlign:"left",transition:"all 0.15s",display:"flex",alignItems:"center",gap:6}}
+                      onMouseEnter={e=>(e.currentTarget.style.background="rgba(168,85,247,0.2)")}
+                      onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.05)")}>
+                      <span>{o.emoji}</span>
+                      <span>{o.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Activities grid + Shop button */
+              <div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:8,marginLeft:4,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>
+                    {slotLabel}
                   </div>
-                  <span style={{width:22,textAlign:"right",color:isFlash?x[2]:"rgba(255,255,255,0.5)",fontWeight:isFlash?700:600,transition:"all 0.3s"}}>{x[1]}</span>
-                </div>
-              );
-            })}
-          </div>
-          {combo >= 3 && (
-            <div style={{textAlign:"center",marginTop:8,fontSize:11,color:"#eab308",fontWeight:600,animation:"fadeIn 0.3s"}}>
-              🔥 {combo} 连击！保持状态
-            </div>
-          )}
-        </div>
-
-        {/* Message */}
-        {msg && (
-          <div style={{borderRadius:12,padding:"10px 14px",background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(255,255,255,0.08)",marginBottom:12,fontSize:13,color:"rgba(255,255,255,0.85)",whiteSpace:"pre-line",animation:"fadeSlide 0.3s ease-out",lineHeight:1.5}}>
-            {msg}
-          </div>
-        )}
-
-        {/* Event */}
-        {currentEvent ? (
-          <div style={{borderRadius:20,padding:20,background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(168,85,247,0.3)",animation:"fadeSlide 0.3s ease-out"}}>
-            <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-              <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#eab308" strokeWidth="1.5" strokeLinecap="round"><circle cx="10" cy="10" r="8"/><line x1="10" y1="6" x2="10" y2="10"/><line x1="10" y1="13" x2="10.01" y2="13"/></svg>
-              {currentEvent.title}
-            </div>
-            <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginBottom:16,lineHeight:1.6}}>{currentEvent.desc}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {currentEvent.options.map((o,i)=>(
-                <button key={i} onClick={()=>handleEvent(i)}
-                  style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,0.1)",fontSize:12,color:"#fff",cursor:"pointer",background:"rgba(255,255,255,0.05)",textAlign:"left",transition:"all 0.15s",display:"flex",alignItems:"center",gap:6}}
-                  onMouseEnter={e=>(e.currentTarget.style.background="rgba(168,85,247,0.2)")}
-                  onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,255,255,0.05)")}>
-                  <span>{o.emoji}</span>
-                  <span>{o.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Activities grid */
-          <div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:8,marginLeft:4,display:"flex",alignItems:"center",gap:4}}>
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>
-              {slotLabel}
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-              {ACTIVITIES.map(a=>{
-                const SvgIcon = SVGS[a.id];
-                return (
-                  <button key={a.id} onClick={()=>doActivity(a)}
-                    style={{borderRadius:14,padding:"12px 4px",border:"1px solid rgba(255,255,255,0.08)",cursor:"pointer",background:"rgba(255,255,255,0.03)",backdropFilter:"blur(8px)",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:4,transition:"all 0.15s"}}
-                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.08)";e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.borderColor="rgba(168,85,247,0.3)";}}
-                    onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.03)";e.currentTarget.style.transform="scale(1)";e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";}}>
-                    <SvgIcon />
-                    <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",lineHeight:1.2}}>{a.label}</div>
+                  <button onClick={()=>{setShowShop(true);setShopMsg("")}}
+                    style={{padding:"4px 10px",borderRadius:8,border:"1px solid rgba(234,179,8,0.2)",background:"rgba(234,179,8,0.08)",fontSize:11,color:"#eab308",cursor:"pointer",display:"flex",alignItems:"center",gap:4,transition:"all 0.15s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(234,179,8,0.15)";e.currentTarget.style.borderColor="rgba(234,179,8,0.4)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background="rgba(234,179,8,0.08)";e.currentTarget.style.borderColor="rgba(234,179,8,0.2)";}}>
+                    🛒 商店 <span style={{fontSize:10,opacity:0.6}}>({stats.popularity}⭐)</span>
                   </button>
-                );
-              })}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                  {ACTIVITIES.map(a=>{
+                    const SvgIcon = SVGS[a.id];
+                    return (
+                      <button key={a.id} onClick={()=>doActivity(a)}
+                        style={{borderRadius:14,padding:"12px 4px",border:"1px solid rgba(255,255,255,0.08)",cursor:"pointer",background:"rgba(255,255,255,0.03)",backdropFilter:"blur(8px)",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:4,transition:"all 0.15s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.08)";e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.borderColor="rgba(168,85,247,0.3)";}}
+                        onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.03)";e.currentTarget.style.transform="scale(1)";e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";}}>
+                        <SvgIcon />
+                        <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",lineHeight:1.2}}>{a.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Log */}
+            {log.length > 0 && (
+              <div style={{marginTop:16}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:6,marginLeft:4}}>📜 日志</div>
+                <div style={{maxHeight:130,overflowY:"auto",display:"flex",flexDirection:"column",gap:3,paddingRight:4}}>
+                  {log.slice(-10).reverse().map((h,i)=>(
+                    <div key={i} style={{borderRadius:8,padding:"5px 10px",background:"rgba(255,255,255,0.03)",fontSize:11,color:"rgba(255,255,255,0.4)",display:"flex",gap:8,alignItems:"center",animation:"fadeSlide 0.2s ease-out"}}>
+                      <span style={{opacity:0.4,whiteSpace:"nowrap",width:44}}>D{h.day}</span>
+                      <span style={{opacity:0.6,width:28}}>{h.slot}</span>
+                      <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{h.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Shop Modal ── */}
+        {showShop && (
+          <div>
+            <div style={{borderRadius:20,padding:20,background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(234,179,8,0.2)",animation:"fadeSlide 0.3s ease-out",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                <div>
+                  <div style={{fontSize:16,fontWeight:700,color:"#eab308"}}>🛒 商店</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:2}}>人气余额：{stats.popularity} ⭐</div>
+                </div>
+                <button onClick={()=>{setShowShop(false);setShopMsg("")}}
+                  style={{padding:"6px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",fontSize:11,color:"rgba(255,255,255,0.6)",cursor:"pointer"}}>
+                  ✕ 关闭
+                </button>
+              </div>
+
+              {shopMsg && (
+                <div style={{borderRadius:10,padding:"8px 12px",background:"rgba(168,85,247,0.1)",border:"1px solid rgba(168,85,247,0.2)",fontSize:12,color:"rgba(255,255,255,0.8)",marginBottom:12,animation:"fadeSlide 0.2s ease-out"}}>
+                  {shopMsg}
+                </div>
+              )}
+
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {SHOP_ITEMS.map(item => {
+                  const canAfford = stats.popularity >= item.cost;
+                  return (
+                    <button key={item.id} onClick={()=>buyItem(item)} disabled={!canAfford}
+                      style={{width:"100%",padding:"10px 14px",borderRadius:12,border:canAfford?"1px solid rgba(234,179,8,0.2)":"1px solid rgba(255,255,255,0.05)",fontSize:12,color:canAfford?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.3)",cursor:canAfford?"pointer":"not-allowed",background:canAfford?"rgba(234,179,8,0.06)":"rgba(255,255,255,0.02)",textAlign:"left",display:"flex",alignItems:"center",gap:8,transition:"all 0.15s",opacity:canAfford?1:0.4}}
+                      onMouseEnter={e=>{if(canAfford){e.currentTarget.style.background="rgba(234,179,8,0.12)";e.currentTarget.style.borderColor="rgba(234,179,8,0.4)";}}}
+                      onMouseLeave={e=>{if(canAfford){e.currentTarget.style.background="rgba(234,179,8,0.06)";e.currentTarget.style.borderColor="rgba(234,179,8,0.2)";}}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:600}}>{item.name}</div>
+                        <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:2}}>{item.desc}</div>
+                      </div>
+                      <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
+                        <div style={{fontSize:13,fontWeight:700,color:canAfford?"#eab308":"rgba(255,255,255,0.3)"}}>⭐{item.cost}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+            <button onClick={()=>{setShowShop(false);setShopMsg("")}}
+              style={{width:"100%",padding:"10px 0",borderRadius:12,border:"1px solid rgba(255,255,255,0.08)",fontSize:12,color:"rgba(255,255,255,0.5)",cursor:"pointer",background:"rgba(255,255,255,0.03)",backdropFilter:"blur(8px)"}}>
+              ← 返回选择活动
+            </button>
           </div>
         )}
 
-        {/* Log */}
-        {log.length > 0 && (
-          <div style={{marginTop:16}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:6,marginLeft:4}}>📜 日志</div>
-            <div style={{maxHeight:130,overflowY:"auto",display:"flex",flexDirection:"column",gap:3,paddingRight:4}}>
-              {log.slice(-10).reverse().map((h,i)=>(
-                <div key={i} style={{borderRadius:8,padding:"5px 10px",background:"rgba(255,255,255,0.03)",fontSize:11,color:"rgba(255,255,255,0.4)",display:"flex",gap:8,alignItems:"center",animation:"fadeSlide 0.2s ease-out"}}>
-                  <span style={{opacity:0.4,whiteSpace:"nowrap",width:44}}>D{h.day}</span>
-                  <span style={{opacity:0.6,width:28}}>{h.slot}</span>
-                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{h.text}</span>
+        {/* ── Daily Summary ── */}
+        {showDailySummary && (
+          <div>
+            <div style={{borderRadius:20,padding:20,background:"rgba(255,255,255,0.06)",backdropFilter:"blur(16px)",border:"1px solid rgba(168,85,247,0.2)",animation:"fadeSlide 0.3s ease-out",marginBottom:12}}>
+              <div style={{textAlign:"center",marginBottom:16}}>
+                <div style={{fontSize:28,marginBottom:4}}>{getDailyMood().emoji}</div>
+                <div style={{fontSize:17,fontWeight:700,color:"#fff"}}>Day {day} 总结</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginTop:4}}>{getDailyMood().text}</div>
+              </div>
+
+              {/* Today's Activities */}
+              {track.current.dayActivities.length > 0 ? (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:6}}>📋 今日活动</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                    {track.current.dayActivities.map((a,i) => (
+                      <span key={i}
+                        style={{padding:"3px 8px",borderRadius:6,background:"rgba(255,255,255,0.05)",fontSize:11,color:"rgba(255,255,255,0.7)"}}>
+                        {a.label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <div style={{marginBottom:14,textAlign:"center",fontSize:12,color:"rgba(255,255,255,0.4)"}}>
+                  😴 今天什么也没做……摸鱼日！
+                </div>
+              )}
+
+              {/* Stats Overview */}
+              <div style={{background:"rgba(255,255,255,0.04)",borderRadius:12,padding:12,marginBottom:16}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:8}}>📊 当前状态</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>体力</div>
+                    <div style={{fontSize:14,fontWeight:700,color:stats.stamina<20?"#ef4444":"#22c55e"}}>{stats.stamina}</div>
+                  </div>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>压力</div>
+                    <div style={{fontSize:14,fontWeight:700,color:stats.stress>70?"#ef4444":"rgba(255,255,255,0.7)"}}>{stats.stress}</div>
+                  </div>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>实力</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#3b82f6"}}>{stats.skill}</div>
+                  </div>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>人气</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#eab308"}}>{stats.popularity}</div>
+                  </div>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>忠诚</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#ec4899"}}>{stats.loyalty}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daily Achievements */}
+              <div style={{background:"rgba(234,179,8,0.05)",borderRadius:12,padding:12,marginBottom:16}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:6}}>⚡ 今日高光</div>
+                {track.current.dayEventCount > 0 && (
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.6)",marginBottom:2}}>
+                    触发 {track.current.dayEventCount} 个事件
+                  </div>
+                )}
+                {track.current.dayActivities.length === 0 && (
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>🌙 没有活动的一天</div>
+                )}
+                {track.current.dayActivities.length > 0 && track.current.dayEventCount === 0 && (
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>平安无事的一天~</div>
+                )}
+              </div>
             </div>
+
+            <button onClick={dismissDailySummary}
+              style={{width:"100%",padding:"12px 0",borderRadius:12,border:"none",textAlign:"center",background:"linear-gradient(135deg,#a855f7,#ec4899)",color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",transition:"all 0.15s",backdropFilter:"blur(8px)"}}>
+              继续下一天 →
+            </button>
           </div>
         )}
       </div>
