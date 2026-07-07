@@ -6,12 +6,14 @@ export const metadata: Metadata = {
   description: "闲暇时刻玩点小游戏",
 };
 
-const MicIcon = () => (
+const MahjongIcon = () => (
   <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-    <line x1="12" y1="19" x2="12" y2="23" />
-    <line x1="8" y1="23" x2="16" y2="23" />
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <circle cx="12" cy="12" r="3" />
+    <line x1="12" y1="3" x2="12" y2="9" />
+    <line x1="12" y1="15" x2="12" y2="21" />
+    <line x1="3" y1="12" x2="9" y2="12" />
+    <line x1="15" y1="12" x2="21" y2="12" />
   </svg>
 );
 
@@ -27,20 +29,28 @@ const FoodIcon = () => (
 
 const games = [
   {
-    title: "IDOL SIMULATOR",
-    subtitle: "韩娱爱豆生活模拟器",
-    href: "/games/idol-simulator",
-    color: "from-purple-400/30 to-pink-400/30",
-    icon: MicIcon,
-    accent: "text-purple-400",
-  },
-  {
     title: "今天吃什么",
     subtitle: "每日美食抽签器",
     href: "/games/food",
     color: "from-orange-400/30 to-yellow-400/30",
     icon: FoodIcon,
     accent: "text-orange-400",
+  },
+  {
+    title: "联机麻将",
+    subtitle: "在线对战",
+    href: "/games/mahjong",
+    color: "from-green-400/30 to-emerald-400/30",
+    icon: MahjongIcon,
+    accent: "text-green-400",
+  },
+  {
+    title: "联机麻将 V4",
+    subtitle: "万条筒简化版",
+    href: "/games/mahjongV4",
+    color: "from-purple-400/30 to-violet-400/30",
+    icon: MahjongIcon,
+    accent: "text-purple-400",
   },
 ];
 
