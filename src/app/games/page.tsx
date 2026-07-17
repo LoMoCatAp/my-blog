@@ -44,14 +44,6 @@ const games = [
     icon: MahjongIcon,
     accent: "text-green-400",
   },
-  {
-    title: "联机麻将 V4",
-    subtitle: "万条筒简化版",
-    href: "/games/mahjongV4",
-    color: "from-purple-400/30 to-violet-400/30",
-    icon: MahjongIcon,
-    accent: "text-purple-400",
-  },
 ];
 
 export default function GamesPage() {

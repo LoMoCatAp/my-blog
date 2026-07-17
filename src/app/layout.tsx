@@ -54,6 +54,27 @@ export default function RootLayout({
                 <CatIcon size={40} className="fill-[var(--accent)] opacity-40" />
               </div>
               <p>{content.footerText}</p>
+              <p className="mt-2">
+                <a
+                  href="https://beian.miit.gov.cn/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[var(--accent)] transition-colors"
+                >
+                  鲁ICP备2026035862号-1
+                </a>
+              </p>
+              <p className="mt-2 flex items-center justify-center gap-1">
+                <img src="/beian-icon.png" alt="" className="inline-block w-3.5 h-3.5" />
+                <a
+                  href="https://beian.mps.gov.cn/#/query/webSearch?code=37030502001093"
+                  rel="noreferrer"
+                  target="_blank"
+                  className="hover:text-[var(--accent)] transition-colors"
+                >
+                  鲁公网安备37030502001093号
+                </a>
+              </p>
             </footer>
           </I18nProvider>
         </ThemeProvider>

@@ -24,7 +24,8 @@ const DEFAULTS: SiteContent = {
 ---
 
 *猫窝建造于 2026 年 6 月 · 持续进化中 🚀*`,
-  footerText: "© 2026 LomoCat · Built with Next.js",
+  footerText: "© 2026 LomoCat",
+
 };
 
 export function getSiteContent(): SiteContent {
