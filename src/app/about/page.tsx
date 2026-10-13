@@ -2,7 +2,7 @@ import MarkdownRenderer from "@/app/posts/[slug]/MarkdownRenderer";
 import { getSiteContent } from "@/lib/site-content";
 
 export const metadata = {
-  title: "关于 - LomoCat's Blog",
+  title: "关于",
   description: "关于洛陌和这个博客",
 };
 

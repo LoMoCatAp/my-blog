@@ -1,0 +1,25 @@
+.lomo-orbit-background{position:fixed;left:0;top:0;width:100vw;height:100dvh;z-index:0;overflow:hidden;pointer-events:none;color:var(--accent);contain:strict}
+.lomo-orbit-background>*{position:absolute;inset:0;pointer-events:none}
+.lomo-orbit-background .lob-wash{opacity:.075;background:radial-gradient(ellipse at 5% 24%,var(--accent),transparent 44%),radial-gradient(ellipse at 97% 85%,var(--accent),transparent 38%)}
+.lomo-orbit-background .lob-cloud{display:block}
+.lomo-orbit-background .lob-orbits{width:100%;height:100%}
+.lomo-orbit-background .lob-orbits,.lomo-orbit-background .lob-glyphs{mask-image:linear-gradient(to right,#000 0,#000 max(0px,calc(var(--lob-content-left) - 24px)),transparent var(--lob-content-left),transparent var(--lob-content-right),#000 calc(var(--lob-content-right) + 24px))}
+.lomo-orbit-background .lob-orbit-line{stroke:currentColor;stroke-width:1.7;opacity:.24}
+.lomo-orbit-background .lob-orbits g:nth-child(2) .lob-orbit-line{stroke-dasharray:3 12}
+.lomo-orbit-background .lob-orbit-point{fill:currentColor;opacity:.65}
+.lomo-orbit-background .lob-orbit-point-soft{opacity:.16}
+.lomo-orbit-background .lob-glyph{position:absolute;display:block;pointer-events:none}
+.lomo-orbit-background .lob-glyph[hidden]{display:none}
+.lomo-orbit-background .lob-glyph svg{display:block;width:100%;height:100%}
+.lomo-orbit-background .lob-click-burst{position:absolute;width:0;height:0;display:block;pointer-events:none}
+.lomo-orbit-background .lob-click-burst i{position:absolute;left:0;top:0;display:block;border-radius:50%;pointer-events:none;opacity:0}
+.lomo-orbit-background .lob-click-halo{width:52px;height:52px;background:radial-gradient(circle,currentColor,transparent 68%)}
+.lomo-orbit-background .lob-click-ring{width:48px;height:48px;border:1px solid currentColor}
+.lomo-orbit-background .lob-click-core{width:4px;height:4px;background:currentColor;box-shadow:0 0 6px currentColor}
+.lomo-orbit-background .lob-click-particle{background:currentColor;box-shadow:0 0 3px currentColor}
+body:has(.lomo-orbit-background){isolation:isolate}
+body:has(.lomo-orbit-background)>main,body:has(.lomo-orbit-background)>footer{position:relative;z-index:1}
+html.dark .lomo-orbit-background .lob-glyphs{opacity:1;}
+html.dark .lomo-orbit-background .lob-orbit-line{opacity:.3}
+@media(max-width:767px){.lomo-orbit-background .lob-glyphs{opacity:.85}.lomo-orbit-background .lob-grid{background-size:26px 26px;opacity:.15}.lomo-orbit-background .lob-orbit-line{opacity:.19}}
+@media(prefers-reduced-motion:reduce){.lomo-orbit-background .lob-glyph{will-change:auto}}

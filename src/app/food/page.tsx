@@ -1,422 +1,165 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useI18n } from "@/components/I18nProvider";
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import { DRINK_KINDS, EMPTY_PREFERENCES, type MealPreferences, type MealResult } from "@/lib/meal-types";
+import styles from "./food.module.css";
+import { snapshotCard, turnCalendar, particles } from "./meal-motion";
 
-interface Food {
-  id: number;
-  name: string;
-  flavors: string;
-  ingredients: string;
-  methods: string;
-  cuisines: string;
-  satiety: string;
-  mood: string;
+const OPTIONS = {
+  flavors: ["清淡", "麻辣", "酸辣", "香辣", "糖醋", "酱香", "蒜香", "咖喱", "麻酱"],
+  ingredients: ["猪肉", "牛肉", "羊肉", "鸡肉", "鸭肉", "鱼", "虾蟹", "蛋类", "豆制品", "蔬菜", "菌菇", "面食", "米饭"],
+  methods: ["爆炒", "蒸煮", "煎炸烤", "炖焖煲", "凉拌"],
+  cuisines: ["川湘", "粤菜", "江浙", "东北", "西北", "日韩", "东南亚", "西餐", "云贵", "台式", "广西"],
+};
+function Icon({ name }: { name: "shuffle" | "cup" | "bowl" | "sliders" | "down" | "refresh" }) {
+  const paths = {
+    shuffle: <><path d="m18 3 3 3-3 3M18 15l3 3-3 3M3 6h3c5 0 7 12 12 12h3M3 18h3c2 0 3.5-2.5 5-5M14 9c1.3-2 2.5-3 4-3h3" /></>,
+    cup: <><path d="m5 8 2 13h10l2-13ZM4 8h16M13 8l2-6h4" /></>,
+    bowl: <><path d="M3 11h18a9 9 0 0 1-18 0ZM7 22h10M8 7c-3-3 3-3 0-6M16 7c-3-3 3-3 0-6" /></>,
+    sliders: <><path d="M3 6h6m4 0h8M3 18h10m4 0h4" /><circle cx="11" cy="6" r="2" /><circle cx="15" cy="18" r="2" /></>,
+    down: <path d="m6 9 6 6 6-6" />,
+    refresh: <><path d="M20 7v5h-5M4 17v-5h5M5 8a8 8 0 0 1 13-3l2 2M4 17l2 2a8 8 0 0 0 13-3" /></>,
+  };
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
-
-interface OptionItem {
-  label: string;
-  value: string;
+function Button({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type="button" {...props} onPointerDown={e => {
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) e.currentTarget.querySelector("span[data-bloom]")?.animate([{ opacity: .45, transform: "scale(.05)" }, { opacity: 0, transform: "scale(1.4)" }], { duration: 480, easing: "ease-out" });
+  }}><span data-bloom className={styles.bloom} aria-hidden="true" />{children}</button>;
 }
-
-const OPTIONS: Record<string, OptionItem[]> = {
-  flavors: [
-    { label: "🌶️ 麻辣", value: "麻辣" },
-    { label: "🍋 酸辣", value: "酸辣" },
-    { label: "🔥 香辣", value: "香辣" },
-    { label: "🍬 糖醋", value: "糖醋" },
-    { label: "🧄 酱香", value: "酱香" },
-    { label: "🧄 蒜香", value: "蒜香" },
-    { label: "🍛 咖喱", value: "咖喱" },
-    { label: "🥜 麻酱", value: "麻酱" },
-    { label: "🥬 清淡", value: "清淡" },
-  ],
-  ingredients: [
-    { label: "🥩 猪肉", value: "猪肉" },
-    { label: "🐂 牛肉", value: "牛肉" },
-    { label: "🐔 鸡肉", value: "鸡肉" },
-    { label: "🐟 鱼", value: "鱼" },
-    { label: "🦐 虾蟹", value: "虾蟹" },
-    { label: "🥚 蛋类", value: "蛋类" },
-    { label: "🫘 豆制品", value: "豆制品" },
-    { label: "🥬 蔬菜", value: "蔬菜" },
-    { label: "🍄 菌菇", value: "菌菇" },
-    { label: "🍜 面食", value: "面食" },
-    { label: "🍚 米饭", value: "米饭" },
-  ],
-  methods: [
-    { label: "🔥 爆炒", value: "爆炒" },
-    { label: "♨️ 蒸煮", value: "蒸煮" },
-    { label: "🍳 煎炸烤", value: "煎炸烤" },
-    { label: "🍲 炖焖煲", value: "炖焖煲" },
-    { label: "🥗 凉拌", value: "凉拌" },
-  ],
-  cuisines: [
-    { label: "🌶️ 川湘", value: "川湘" },
-    { label: "🥟 粤菜", value: "粤菜" },
-    { label: "🍃 江浙", value: "江浙" },
-    { label: "🧊 东北", value: "东北" },
-    { label: "🐑 西北", value: "西北" },
-    { label: "🍣 日韩", value: "日韩" },
-    { label: "🌴 东南亚", value: "东南亚" },
-    { label: "🍝 西餐", value: "西餐" },
-  ],
-  satiety: [
-    { label: "🥣 汤水多", value: "汤水多" },
-    { label: "🍽️ 干爽无汤", value: "干爽无汤" },
-    { label: "🥗 轻食七分饱", value: "轻食七分饱" },
-    { label: "🍖 硬菜大快朵颐", value: "硬菜大快朵颐" },
-  ],
-  moods: [
-    { label: "🎉 放纵", value: "放纵" },
-    { label: "🧘 克制", value: "克制" },
-    { label: "😔 没胃口", value: "没胃口" },
-  ],
-};
-
-/* ── SVG icons for each category ── */
-const FlavorIcon = () => (
-  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="shrink-0"><circle cx="10" cy="10" r="6"/><path d="M6 10c0-2 1.5-4 4-4"/></svg>
-);
-const IngIcon = () => (
-  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="shrink-0"><path d="M10 3v14M3 10h14"/></svg>
-);
-const MethodIcon = () => (
-  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="shrink-0"><path d="M4 16L16 4M8 4l8 8M4 12l8 8"/></svg>
-);
-const CuisineIcon = () => (
-  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="shrink-0"><circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 1 0 14"/></svg>
-);
-const AvoidIcon = () => (
-  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="shrink-0"><path d="M15 5L5 15M5 5l10 10"/></svg>
-);
-const SlotIcon = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/></svg>
-);
-const RollIcon = () => (
-  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0"><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 2a10 10 0 0 0 10 10"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10"/></svg>
-);
-
-const CATEGORY_ICONS: Record<string, () => React.ReactNode> = {
-  flavors: FlavorIcon,
-  ingredients: IngIcon,
-  methods: MethodIcon,
-  cuisines: CuisineIcon,
-};
-
-// ── simplified category theme (no gradients, just solid subtle colors) ──
-const CAT_THEME: Record<string, { badge: string; bg: string; chip: string; chipActive: string; border: string }> = {
-  flavors:    { badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300", bg: "bg-rose-50/50 dark:bg-rose-950/10", chip: "bg-white dark:bg-[var(--bg-secondary)] text-[var(--text)] border-[var(--border)] dark:border-[var(--border)]", chipActive: "bg-[var(--accent)] text-white", border: "border-rose-200/50 dark:border-rose-900/30" },
-  ingredients: { badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", bg: "bg-emerald-50/50 dark:bg-emerald-950/10", chip: "bg-white dark:bg-[var(--bg-secondary)] text-[var(--text)] border-[var(--border)] dark:border-[var(--border)]", chipActive: "bg-[var(--accent)] text-white", border: "border-emerald-200/50 dark:border-emerald-900/30" },
-  methods:    { badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", bg: "bg-amber-50/50 dark:bg-amber-950/10", chip: "bg-white dark:bg-[var(--bg-secondary)] text-[var(--text)] border-[var(--border)] dark:border-[var(--border)]", chipActive: "bg-[var(--accent)] text-white", border: "border-amber-200/50 dark:border-amber-900/30" },
-  cuisines:   { badge: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300", bg: "bg-sky-50/50 dark:bg-sky-950/10", chip: "bg-white dark:bg-[var(--bg-secondary)] text-[var(--text)] border-[var(--border)] dark:border-[var(--border)]", chipActive: "bg-[var(--accent)] text-white", border: "border-sky-200/50 dark:border-sky-900/30" },
-};
-
-const catLabels: Record<string, string> = {
-  flavors: "味型偏好",
-  ingredients: "想吃啥食材",
-  methods: "烹饪方式",
-  cuisines: "菜系",
-};
+function Chips({ label, choices, values, onChange }: { label: string; choices: string[]; values: string[]; onChange: (value: string) => void }) {
+  return <fieldset className={styles.fieldset}><legend>{label}</legend><div className={styles.chips}>{choices.map(value => <Button key={value} className={styles.chip} aria-pressed={values.includes(value)} onClick={() => onChange(value)}>{value}</Button>)}</div></fieldset>;
+}
+function tilt(event: PointerEvent<HTMLElement>) {
+  if (event.pointerType === "touch" || event.currentTarget.classList.contains(styles.turning) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = event.currentTarget, rect = el.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / rect.width, y = (event.clientY - rect.top) / rect.height;
+  el.style.setProperty("--tilt-x", `${(y - .5) * -10}deg`);
+  el.style.setProperty("--tilt-y", `${(x - .5) * 12}deg`);
+  el.style.setProperty("--light-x", `${x * 100}%`);
+  el.style.setProperty("--light-y", `${y * 100}%`);
+}
+function resetTilt(event: PointerEvent<HTMLElement>) {
+  event.currentTarget.style.setProperty("--tilt-x", "0deg");
+  event.currentTarget.style.setProperty("--tilt-y", "0deg");
+}
+function resultParams(prefs: MealPreferences, pair: MealResult | null, mode: "meal" | "drink") {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(prefs)) if (Array.isArray(value) ? value.length : value) params.set(key, Array.isArray(value) ? value.join(",") : value);
+  params.set("previousFood", String(pair?.food?.id || 0));
+  params.set("previousDrink", String(pair?.drink?.id || 0));
+  params.set("mode", mode);
+  params.set("preview", "1");
+  return params;
+}
 
 export default function FoodPage() {
-  const { t } = useI18n();
-  const [pick, setPick] = useState<Food | null>(null);
-  const [rolling, setRolling] = useState(false);
-  const [foods, setFoods] = useState<Food[]>([]);
-  const [filters, setFilters] = useState<Record<string, string[]>>({
-    flavors: [], ingredients: [], methods: [], cuisines: [], satiety: [], moods: [],
-  });
-  const [avoidText, setAvoidText] = useState("");
-  const [showMore, setShowMore] = useState(false);
-  const [showing, setShowing] = useState(false);
-  const [slotNames, setSlotNames] = useState<string[]>(['?', '?', '?']);
-  const intervalRef = useRef<number>(0);
-  const resultRef = useRef<HTMLDivElement>(null);
+  const [prefs, setPrefs] = useState<MealPreferences>({ ...EMPTY_PREFERENCES });
+  const [pair, setPair] = useState<MealResult | null>(null);
+  const [preview, setPreview] = useState<MealResult | null>(null);
+  const [busy, setBusy] = useState<"meal" | "drink" | null>(null);
+  const [message, setMessage] = useState("");
+  const [brands, setBrands] = useState<string[]>([]);
+  const [more, setMore] = useState(false);
+  const mealRef = useRef<HTMLElement>(null), drinkRef = useRef<HTMLElement>(null);
+  const mounted = useRef(false), controller = useRef<AbortController | null>(null);
+  const animations = useRef<Animation[]>([]);
+  const locked = useRef(false);
 
-  useEffect(() => { fetch("/api/food?all=true").then(r => r.json()).then(d => setFoods(d.foods || d)).catch(() => {}); }, []);
+  useEffect(() => {
+    mounted.current = true;
+    const initial = new AbortController();
+    const initialTimeout = window.setTimeout(() => initial.abort(), 10000);
+    fetch("/api/drinks", { signal: initial.signal }).then(r => { if (!r.ok) throw new Error(); return r.json() as Promise<{ brands: string[] }>; })
+      .then(catalogue => { if (mounted.current && !initial.signal.aborted) setBrands(catalogue.brands); })
+      .catch(() => {}).finally(() => window.clearTimeout(initialTimeout));
+    for (const art of ["meal", "bowl", "coffee", "drink"]) { const image = new Image(); image.src = `/food-art-v7/${art}.png`; }
+    return () => { window.clearTimeout(initialTimeout); initial.abort(); mounted.current = false; controller.current?.abort(); animations.current.forEach(x => x.cancel()); };
+  }, []);
 
-  function toggleFilter(cat: string, val: string) {
-    setFilters(f => ({ ...f, [cat]: f[cat].includes(val) ? f[cat].filter(v => v !== val) : [...f[cat], val] }));
-  }
-
-  async function roll() {
-    setRolling(true);
-    setPick(null);
-    setShowing(false);
-    setSlotNames(['?', '?', '?']);
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([k, v]) => { if (v.length) params.set(k, v.join(",")); });
-    if (avoidText.trim()) params.set("avoid", avoidText.trim());
+  async function draw(mode: "meal" | "drink") {
+    if (locked.current || (mode === "drink" && !pair?.food)) return;
+    locked.current = true;
+    setBusy(mode); setMessage("");
+    const request = new AbortController();
+    controller.current = request;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cards = (mode === "meal" ? [mealRef.current, drinkRef.current] : [drinkRef.current]).filter(Boolean) as HTMLElement[];
+    animations.current.forEach(animation => animation.cancel());
+    animations.current = [];
+    const timeout = window.setTimeout(() => request.abort(), 10000);
     try {
-      const res = await fetch("/api/food?" + params.toString());
-      const json = await res.json();
-      const items: Food[] = json.foods || json;
-      if (!items.length) { setRolling(false); return; }
-      const names = items.map(i => i.name);
-      const totalFrames = 24;
-      let frame = 0;
-      intervalRef.current = window.setInterval(() => {
-        const shuffled = [...names].sort(() => Math.random() - 0.5);
-        setSlotNames(shuffled.slice(0, 3));
-        frame++;
-        if (frame >= totalFrames) {
-          clearInterval(intervalRef.current);
-          const final = items[Math.floor(Math.random() * items.length)];
-          setPick(final);
-          setRolling(false);
-          setShowing(true);
-          setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+      const [result] = await Promise.all([
+        fetch("/api/meal?" + resultParams(prefs, pair, mode), { signal: request.signal }).then(r => { if (!r.ok) throw new Error(); return r.json() as Promise<MealResult>; }),
+        brands.length ? Promise.resolve() : fetch("/api/drinks", { signal: request.signal }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(catalogue => { if (mounted.current && !request.signal.aborted) setBrands(catalogue.brands); }).catch(() => {}),
+      ]);
+      window.clearTimeout(timeout);
+      if (!mounted.current || request.signal.aborted) return;
+      if (!reduced && result.food) {
+        const weights = Array.from({ length: 6 }, (_, i) => 1.5 ** i), total = weights.reduce((a, b) => a + b, 0);
+        for (let turn = 0; turn < weights.length; turn++) {
+          if (!mounted.current || request.signal.aborted) return;
+          const before = cards.map(snapshotCard), face = turn === 5 ? result : result.previews?.[turn] || result;
+          flushSync(() => setPreview(face));
+          const duration = 2400 * weights[turn] / total;
+          cards.forEach(card => { card.dataset.flip = String(turn + 1); card.dataset.flipDuration = String(Math.round(duration)); });
+          if (turn === 0 || turn === 5) cards.forEach(card => particles(card, animations.current, turn === 5));
+          await Promise.all(cards.map((card, i) => turnCalendar(card, before[i], snapshotCard(card), animations.current, i * 24, duration)));
         }
-      }, 100);
-    } catch { setRolling(false); }
+      }
+      if (!mounted.current || request.signal.aborted) return;
+      setPair(result); setPreview(null); setMessage(result.message);
+    } catch {
+      if (mounted.current) { setPreview(null); setMessage("这次没能加载菜单，再试一次吧。"); }
+    } finally {
+      window.clearTimeout(timeout);
+      animations.current.forEach(x => x.cancel()); animations.current = [];
+      if (mounted.current) { locked.current = false; setBusy(null); }
+    }
   }
-
-  return (
-    <div className="max-w-3xl mx-auto px-4 py-8 text-[var(--text)]">
-      {/* ── Header ── */}
-      <h1 className="text-2xl font-bold text-[var(--text)] mb-1">{t("food.title")}</h1>
-      <p className="text-sm text-[var(--text-muted)] mb-6">{t("food.subtitle")}</p>
-
-      {/* ── Option categories ── */}
-      <div className="space-y-3 mb-4">
-        {["flavors", "ingredients", "methods"].map((cat, ci) => {
-          const CatIcon = CATEGORY_ICONS[cat];
-          const theme = CAT_THEME[cat];
-          return (
-            <div
-              key={cat}
-              className={`option-category rounded-xl border ${theme.border} ${theme.bg} p-3.5`}
-            >
-              <p className="text-xs font-semibold text-[var(--text)] mb-2 flex items-center gap-1.5">
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${theme.badge}`}>
-                  <CatIcon /> {catLabels[cat]}
-                </span>
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {OPTIONS[cat].map((opt, vi) => {
-                  const active = filters[cat].includes(opt.value);
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => toggleFilter(cat, opt.value)}
-                      className={`option-chip px-3 py-1.5 text-sm rounded-lg font-medium select-none transition-all duration-150 ${
-                        active
-                          ? `${theme.chipActive} shadow-sm`
-                          : `${theme.chip} border hover:shadow-sm hover:-translate-y-0.5 hover:border-[var(--accent)] hover:text-[var(--accent)]`
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* ── 更多选项 toggle (only in flavors box) ── */}
-              {cat === "flavors" && (
-                <div className="mt-2.5 pt-2.5 border-t border-dashed border-[var(--border)]">
-                  <button
-                    onClick={() => setShowMore(!showMore)}
-                    className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors duration-150 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>{showMore ? "收起" : "更多选项"} →</span>
-                    {!showMore && filters.cuisines.length > 0 && (
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--accent)] text-white text-[10px] font-bold leading-none">
-                        {filters.cuisines.length}
-                      </span>
-                    )}
-                  </button>
-
-                  {showMore && (
-                    <div className="mt-2.5">
-                      {(() => {
-                        const theme = CAT_THEME["cuisines"];
-                        const cat = "cuisines";
-                        const CatIcon = CATEGORY_ICONS[cat];
-                        return (
-                          <>
-                            <p className="text-xs font-semibold text-[var(--text)] mb-2 flex items-center gap-1.5">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${theme.badge}`}>
-                                <CatIcon /> {catLabels[cat]}
-                              </span>
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {OPTIONS[cat].map((opt) => {
-                                const active = filters[cat].includes(opt.value);
-                                return (
-                                  <button
-                                    key={opt.value}
-                                    onClick={() => toggleFilter(cat, opt.value)}
-                                    className={`option-chip px-3 py-1.5 text-sm rounded-lg font-medium select-none transition-all duration-150 ${
-                                      active
-                                        ? `${theme.chipActive} shadow-sm`
-                                        : `${theme.chip} border hover:shadow-sm hover:-translate-y-0.5 hover:border-[var(--accent)] hover:text-[var(--accent)]`
-                                    }`}
-                                  >
-                                    {opt.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* ── 绝对不吃 ── */}
-        <div className="option-category rounded-xl border border-red-200/50 dark:border-red-900/30 bg-red-50/50 dark:bg-red-950/10 p-3.5">
-          <p className="text-xs font-semibold text-[var(--text)] mb-2 flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-              <AvoidIcon /> 绝对不吃
-            </span>
-          </p>
-          <input
-            value={avoidText}
-            onChange={e => setAvoidText(e.target.value)}
-            placeholder={t("food.avoidPlaceholder")}
-            className="w-full px-3.5 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text)] outline-none transition-all duration-150 focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_rgba(249,115,22,0.12)] placeholder:text-[var(--text-muted)]"
-          />
+  function toggle(key: keyof typeof OPTIONS, value: string) {
+    setPrefs(old => ({ ...old, [key]: old[key].includes(value) ? old[key].filter(x => x !== value) : [...old[key], value] }));
+  }
+  const shown = preview || pair;
+  const food = shown?.food, drink = shown?.drink;
+  const mealArt = food && /面|粉|汤|粥/.test(food.name) ? "bowl" : "meal";
+  const flavor = prefs.flavors.length === 0 ? "随意" : prefs.flavors.length === 1 ? prefs.flavors[0] : "";
+  const preferenceCount = Object.values(prefs).reduce((n, v) => n + (Array.isArray(v) ? v.length : v ? 1 : 0), 0);
+  function cardContent(label: string, icon: "cup" | "bowl", art: string, content: ReactNode) {
+    return <><div data-ticket-face className={styles.face}><div className={styles.cardLabel}><Icon name={icon} />{label}</div>{food && <><div className={styles.art}><img src={`/food-art-v7/${art}.png`} width="256" height="256" alt="" draggable="false" /></div><div className={styles.copy}>{content}</div></>}</div><div data-calendar className={styles.calendar} aria-hidden="true" /></>;
+  }
+  return <div className={styles.page}>
+    <section className={styles.product} aria-label="今天吃什么抽签舞台">
+      <header className={styles.header}><div><span className={styles.wordmark}>LomoCat</span><h1>今天吃什么</h1></div><Icon name="bowl" /></header>
+      <div className={styles.stage} aria-busy={!!busy}>
+        <div className={styles.stageHeading}><h2>这次就吃</h2><Button className={styles.primary} disabled={!!busy} onClick={() => draw("meal")}><Icon name="shuffle" />{busy === "meal" ? "抽签中…" : pair?.food ? "换一餐" : "抽一餐"}</Button></div>
+        <div className={styles.pair}>
+          <article ref={mealRef} className={`${styles.ticket} ${styles.meal}`} onPointerMove={tilt} onPointerLeave={resetTilt} aria-label="餐食结果">
+            {cardContent("餐食", "bowl", mealArt, <><h3>{food?.name || (busy ? "抽签中…" : "等你抽一餐")}</h3><p>{food ? [food.flavors?.split(",")[0], food.cuisines?.split(",")[0]].filter(Boolean).join(" · ") : "选点口味，交给这一签"}</p><span className={styles.ticketFoot}>{food?.ingredients?.split(",").slice(0, 3).join(" · ") || "餐食签"}</span></>)}
+          </article>
+          <article ref={drinkRef} className={`${styles.ticket} ${styles.drink}`} onPointerMove={tilt} onPointerLeave={resetTilt} aria-label="饮品结果">
+            {cardContent("饮品", "cup", drink?.kind === "coffee" ? "coffee" : "drink", <><span className={styles.brand}>{drink?.brand || "自动搭配"}</span><h3>{drink?.name || (busy ? "配一杯…" : "暂时没有合适的饮品")}</h3><p>{drink ? DRINK_KINDS[drink.kind] : "可以调整下方偏好"}</p><span className={styles.ticketFoot}>{drink?.ingredients?.split(",").filter(x => x !== "奶").slice(0, 2).join(" · ") || "饮品签"}</span></>)}
+          </article>
+          <div data-particles className={styles.particles} aria-hidden="true" />
         </div>
+        <div className={styles.resultActions}><span className={styles.reason}>{!busy && pair?.reason}</span><Button className={styles.secondary} disabled={!!busy || !pair?.food} onClick={() => draw("drink")}><Icon name="refresh" />{busy === "drink" ? "换一杯…" : "只换饮品"}</Button></div>
+        <div className={styles.controls}><Chips label="口味" choices={["随意", "清淡", "香辣"]} values={[flavor]} onChange={value => setPrefs(old => ({ ...old, flavors: value === "随意" ? [] : [value] }))} /></div>
+        <div className={styles.preferences}>
+          <button type="button" className={styles.summary} onClick={() => setMore(x => !x)} aria-expanded={more} aria-controls="meal-preferences"><span><Icon name="sliders" />偏好设置{preferenceCount > 0 && <small>{preferenceCount}</small>}</span><span className={more ? styles.openChevron : ""}><Icon name="down" /></span></button>
+          <div className={`${styles.accordion} ${more ? styles.expanded : ""}`} aria-hidden={!more} inert={!more} id="meal-preferences"><div className={styles.settingsWrap}><div className={styles.settings}>
+            <label className={styles.field}>不想吃 / 喝的<input maxLength={250} value={prefs.avoid} onChange={e => setPrefs(old => ({ ...old, avoid: e.target.value }))} placeholder="例如：牛肉、芒果" /></label>
+            <label className={styles.field}>饮品品牌<select value={prefs.brand} onChange={e => setPrefs(old => ({ ...old, brand: e.target.value }))}><option value="">不限品牌</option>{brands.map(brand => <option key={brand}>{brand}</option>)}</select></label>
+            <div className={styles.full}><Chips label="饮品类型" choices={["随意", "茶饮", "咖啡", "果茶", "奶茶"]} values={[({ "": "随意", "tea-drinks": "茶饮", coffee: "咖啡", "fruit-tea": "果茶", "milk-tea": "奶茶" } as Record<string, string>)[prefs.kind]]} onChange={value => setPrefs(old => ({ ...old, kind: ({ "随意": "", "茶饮": "tea-drinks", "咖啡": "coffee", "果茶": "fruit-tea", "奶茶": "milk-tea" } as Record<string, string>)[value] }))} /></div>
+            {(["flavors", "ingredients", "methods", "cuisines"] as const).map(key => <div key={key} className={styles.full}><Chips label={{ flavors: "更多口味", ingredients: "食材", methods: "做法", cuisines: "菜系" }[key]} choices={OPTIONS[key]} values={prefs[key]} onChange={value => toggle(key, value)} /></div>)}
+            <label className={styles.field}>饱腹感<select value={prefs.satiety} onChange={e => setPrefs(old => ({ ...old, satiety: e.target.value }))}><option value="">随意</option>{["汤水多", "干爽无汤", "轻食七分饱", "硬菜大快朵颐"].map(x => <option key={x}>{x}</option>)}</select></label>
+            <label className={styles.field}>心情<select value={prefs.mood} onChange={e => setPrefs(old => ({ ...old, mood: e.target.value }))}><option value="">随意</option>{["放纵", "克制", "没胃口", "一般"].map(x => <option key={x}>{x}</option>)}</select></label>
+            <button type="button" className={styles.reset} onClick={() => setPrefs({ ...EMPTY_PREFERENCES })}>清空偏好</button>
+          </div></div></div>
+        </div>
+        <p className={message ? styles.message : styles.announcement} role="status" aria-live="polite">{message || (pair?.food && !busy ? `${food?.name}，${drink ? `${drink.brand} · ${drink.name}` : "暂无配饮"}` : "")}</p>
+        <p className={styles.menuNote}>饮品以门店当日菜单为准。{drink?.source_url && <a href={drink.source_url} target="_blank" rel="noopener noreferrer">单品来源 ↗</a>}</p>
       </div>
-
-      {/* ── Roll button ── */}
-      <button
-        onClick={roll}
-        disabled={rolling}
-        className={`roll-btn w-full py-4 rounded-xl bg-[var(--accent)] text-white font-bold text-lg transition-all duration-150 shadow-md flex items-center justify-center gap-3 ${
-          rolling
-            ? "opacity-80 cursor-wait"
-            : "hover:shadow-lg hover:brightness-110 active:brightness-90"
-        } disabled:opacity-60`}
-      >
-        {rolling ? (
-          <>
-            <span className="inline-block animate-spin"><RollIcon /></span>
-            <span>{t("food.rolling")}</span>
-          </>
-        ) : (
-          <>
-            <SlotIcon />
-            <span>{t("food.roll")}</span>
-          </>
-        )}
-      </button>
-
-      {/* ── Slot reveal ── */}
-      {rolling && (
-        <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 text-center shadow-sm slot-machine">
-          <p className="text-xs font-medium text-[var(--text-muted)] mb-3 flex items-center justify-center gap-1.5">
-            <SlotIcon /> 正在为你精选...
-          </p>
-          <div className="flex justify-center gap-3 mb-1 overflow-hidden">
-            {[0, 1, 2].map(i => (
-              <div
-                key={i}
-                className="slot-reel w-28 h-14 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] flex items-center justify-center overflow-hidden"
-              >
-                <span className="text-sm font-extrabold text-[var(--text)] px-1 truncate max-w-full">
-                  {slotNames[i] || "?"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Result ── */}
-      {pick && showing && (
-        <div ref={resultRef} className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-center shadow-sm result-card">
-          <div className="text-5xl mb-2 result-emoji">🍜</div>
-          <h2 className="text-2xl font-bold text-[var(--text)] mb-3 result-name">{pick.name}</h2>
-          <div className="flex flex-wrap justify-center gap-1.5 text-xs mb-4 result-tags">
-            {pick.flavors.split(",").map(tag => (
-              <span key={tag} className="tag-chip px-2.5 py-1 rounded-full font-medium bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300 border border-rose-200 dark:border-rose-800/30">{tag}</span>
-            ))}
-            {pick.ingredients.split(",").map(tag => (
-              <span key={tag} className="tag-chip px-2.5 py-1 rounded-full font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/30">{tag}</span>
-            ))}
-            {pick.cuisines.split(",").map(tag => (
-              <span key={tag} className="tag-chip px-2.5 py-1 rounded-full font-medium bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300 border border-sky-200 dark:border-sky-800/30">{tag}</span>
-            ))}
-          </div>
-          <button
-            onClick={roll}
-            className="mt-1 px-5 py-2 text-sm font-bold rounded-lg bg-[var(--accent)] text-white shadow-sm hover:shadow-md hover:brightness-110 active:brightness-90 transition-all duration-150"
-          >
-            <span className="flex items-center gap-1.5 justify-center">
-              <RollIcon /> 再来一次
-            </span>
-          </button>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes chipHover {
-          0% { transform: scale(1); }
-          40% { transform: scale(1.08); }
-          70% { transform: scale(0.96); }
-          100% { transform: scale(1); }
-        }
-
-        .option-category {
-          animation: fadeSlideIn 0.35s ease-out forwards;
-          opacity: 0;
-        }
-        @keyframes fadeSlideIn {
-          0% { opacity: 0; transform: translateY(8px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
-        .option-chip {
-          cursor: pointer;
-        }
-        .option-chip:hover:not(.bg-\\[var\\(--accent\\)\\]) {
-          animation: chipHover 0.35s ease-out;
-        }
-        .option-chip:active {
-          transform: scale(0.92) !important;
-        }
-
-        .slot-machine {
-          animation: fadeSlideIn 0.3s ease-out;
-        }
-
-        @keyframes gentlePop {
-          0% { opacity: 0; transform: scale(0.85); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes tagChipIn {
-          0% { opacity: 0; transform: scale(0.5); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-
-        .result-emoji {
-          animation: gentlePop 0.4s ease-out forwards;
-        }
-        .result-name {
-          animation: fadeSlideIn 0.35s ease-out 0.1s forwards;
-          opacity: 0;
-        }
-        .result-tags .tag-chip {
-          animation: tagChipIn 0.25s ease-out forwards;
-          opacity: 0;
-        }
-        .result-tags .tag-chip:nth-child(1) { animation-delay: 0.15s; }
-        .result-tags .tag-chip:nth-child(2) { animation-delay: 0.2s; }
-        .result-tags .tag-chip:nth-child(3) { animation-delay: 0.25s; }
-        .result-tags .tag-chip:nth-child(4) { animation-delay: 0.3s; }
-        .result-tags .tag-chip:nth-child(5) { animation-delay: 0.35s; }
-        .result-tags .tag-chip:nth-child(6) { animation-delay: 0.4s; }
-        .result-card {
-          animation: fadeSlideIn 0.35s ease-out;
-        }
-      `}</style>
-    </div>
-  );
+    </section>
+  </div>;
 }

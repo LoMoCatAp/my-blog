@@ -44,7 +44,7 @@ export function getAllPosts(): PostMeta[] {
     const stats = fs.statSync(filePath);
     const fileMtime = formatDate(stats.mtime);
     // Only show updated if it differs from publish date
-    const updated = fileMtime !== formatDate(parseDate(publishDate)) ? fileMtime : undefined;
+    const updated = data.updated || (fileMtime !== formatDate(parseDate(publishDate)) ? fileMtime : undefined);
 
     return {
       slug: file.replace(/\.md$/, ""),
@@ -80,7 +80,7 @@ export function getPostBySlug(slug: string): Post | null {
   const publishDate = data.date || "1970-01-01";
   const stats = fs.statSync(filePath);
   const fileMtime = formatDate(stats.mtime);
-  const updated = fileMtime !== formatDate(parseDate(publishDate)) ? fileMtime : undefined;
+  const updated = data.updated || (fileMtime !== formatDate(parseDate(publishDate)) ? fileMtime : undefined);
 
   return {
     slug,

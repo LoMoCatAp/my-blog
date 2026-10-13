@@ -1,14 +1,15 @@
 ---
-title: "基岩版 Addon 开发入门"
+title: "基岩版 Addon：从一个自定义物品开始"
 date: "2026-06-20"
 tags: ["技术", "Minecraft", "游戏"]
-description: "基岩版 Addon 没那么神秘，其实就是一堆 JSON 文件。了解基础结构之后，你也能做自己的 Addon。"
+description: "行为包、资源包和 manifest.json 的配置，以及自定义物品的创建与测试。"
+updated: "2026-10-11"
 published: true
 ---
 
-基岩版的 Addon（也叫行为包/资源包）本质上就是一堆 JSON 文件，Minecraft 用它们来决定游戏里的东西长什么样、有什么行为。
+先分清行为包和资源包各自负责什么，再配置 manifest.json。这篇从一个自定义物品开始，做完后把包导入游戏测试。
 
-这跟 Java 版不一样——Java 版用 Java 写 Mod，基岩版用 JSON + 脚本，门槛低很多。
+物品示例使用 1.20.80 格式，包的最低引擎版本为 1.21.0。组件和脚本 API 要与实际游戏版本匹配。
 
 ## 两个包
 
@@ -23,21 +24,21 @@ published: true
 
 ## 文件结构
 
-一个最简单的行为包长这样：
+先建一个行为包，文件结构如下：
 
 ```
 my_addon_behavior/
-  manifest.json          ← 包的身份证，必须有
+  manifest.json          ← 包的信息，必须有
   pack_icon.png          ← 包的图标（256×256）
   entities/
     my_zombie.json       ← 自定义生物
   items/
     my_sword.json        ← 自定义物品
   scripts/
-    main.js              ← 脚本文件（可选，1.20+）
+    main.js              ← 脚本文件（可选）
 ```
 
-`manifest.json` 是所有包的入口。它大概长这样：
+包的信息写在 `manifest.json` 中：
 
 ```json
 {
@@ -74,8 +75,7 @@ my_addon_behavior/
   "format_version": "1.20.80",
   "minecraft:item": {
     "description": {
-      "identifier": "my_addon:my_sword",
-      "is_experimental": false
+      "identifier": "my_addon:my_sword"
     },
     "components": {
       "minecraft:max_stack_size": 1,
@@ -86,8 +86,7 @@ my_addon_behavior/
       },
       "minecraft:icon": {
         "texture": "my_sword"
-      },
-      "minecraft:weapon": {}
+      }
     }
   }
 }
@@ -95,56 +94,13 @@ my_addon_behavior/
 
 物品的 identifier 必须带命名空间（`my_addon:` 前面那个），不能只用 `my_sword`，不然会和原版冲突。
 
-## 自定义生物
+## 生物放到后面做
 
-最简单的方式是复制原版生物 JSON 改一改。可以在 Minecraft 安装目录的 `data/behavior_packs/vanilla/entities/` 下找到原版生物的 JSON。
-
-比如做个发光僵尸：
-
-```json
-{
-  "format_version": "1.20.80",
-  "minecraft:entity": {
-    "description": {
-      "identifier": "my_addon:glow_zombie",
-      "is_spawnable": true,
-      "is_summonable": true,
-      "is_experimental": false
-    },
-    "components": {
-      "minecraft:type_family": {
-        "family": ["zombie", "monster"]
-      },
-      "minecraft:health": {
-        "value": 30,
-        "max": 30
-      },
-      "minecraft:movement": {
-        "value": 0.25
-      },
-      "minecraft:glow": {
-        "value": true
-      },
-      "minecraft:behavior.melee_attack": {
-        "priority": 2
-      }
-    },
-    "events": {
-      "minecraft:entity_spawned": {
-        "add": {
-          "component_groups": ["minecraft:glow"]
-        }
-      }
-    }
-  }
-}
-```
-
-然后在资源包里加纹理和模型，自定义生物的纹理放在 `textures/entity/` 下，并在 `textures/terrain_texture.json` 或 `textures/item_texture.json` 里注册。
+物品加载成功后，再接着做[生物行为与掉落物](/posts/bedrock-addon-entity-advanced)。生物还需要客户端实体、模型和纹理，不能只靠一份行为定义完成。
 
 ## 脚本
 
-从 1.20 开始 Mojang 正式支持了 GameTest Framework，可以用 JavaScript 写更复杂的逻辑。
+需要程序逻辑时，可以使用 JavaScript 脚本。脚本 API、依赖版本和实验选项要按目标游戏版本核对。
 
 一个简单的脚本 `scripts/main.js`：
 
@@ -165,9 +121,9 @@ system.runInterval(() => {
 }, 20);
 ```
 
-脚本需要在 `manifest.json` 里声明：
+下面是 `manifest.json` 的字段片段，合并到现有文件中；两个 `uuid` 要分别替换为新的 UUID。这里使用 `@minecraft/server` 1.12.0，升级游戏时需核对可用 API 版本：
 
-```json
+```jsonc
 "modules": [
   {
     "type": "data",
@@ -199,20 +155,17 @@ system.runInterval(() => {
 
 或者更快的测试方式：把文件夹直接丢到 `com.mojang` 目录下的 `development_behavior_packs/` 和 `development_resource_packs/` 里，这样改完文件直接重进世界就能看到效果，不用反复打包。
 
-`com.mojang` 目录位置：
+开发目录随平台和安装方式不同。位置可查[官方开发入门](https://learn.microsoft.com/en-us/minecraft/creator/documents/gettingstarted)。
 
-- Windows：`%localappdata%\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\`
-- Android：`/storage/emulated/0/games/com.mojang/`
-- iOS：`Minecraft/games/com.mojang/`
+资源包中的物品图标还需要在 `textures/item_texture.json` 注册 `my_sword`，并放入对应 PNG；物品定义本身不会生成纹理。
 
-## 几个建议
+## 测试时检查这些地方
 
-- **先从改现有生物入手。** 复制原版的 JSON，改几个数值看看效果，比从头写容易
-- **善用 VS Code。** 装个 JSON 高亮插件，不然会看得眼睛疼
+- **使用编辑器的格式检查。** 先排除 JSON 语法错误，再排查游戏内的配置。
 - **留意 JSON 格式。** 少个逗号或多一个都会导致整个包不加载，基岩版报错也不明显
-- **UUI 别用重复的。** 这是最常见的翻车原因，UUID 必须每次生成新的
-- **官方文档其实还行。** https://learn.microsoft.com/en-us/minecraft/creator/ 上的文档虽然写得不算特别好，但够用
+- **检查 UUID。** 不同包和模块的标识不能冲突；已有包更新时也要保持标识一致。
+- **查目标版本的组件说明。** [Minecraft Creator 文档](https://learn.microsoft.com/en-us/minecraft/creator/) 可以按组件名检索。
 
 ---
 
-Addon 开发的内容其实还有很多——自定义方块、自定义合成、战利品表、动画控制器……一次写不完。后面可以再续。
+下一篇接着做[自定义方块与合成配方](/posts/bedrock-addon-blocks-recipes)。

@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import path from "path";
+import { DRINK_CATALOG } from "./drink-catalog";
 
 const DB_PATH = path.join(process.cwd(), "data/blog.db");
 
@@ -83,7 +84,33 @@ function initSchema(db: Database.Database) {
       price TEXT DEFAULT '',
       created_at TEXT DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS drinks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      brand TEXT NOT NULL,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      ingredients TEXT NOT NULL DEFAULT '',
+      avoid_tags TEXT NOT NULL DEFAULT '',
+      source_url TEXT NOT NULL DEFAULT '',
+      active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
+  // Existing food data is retained. Also make a fresh installation compatible
+  // with the food editor's current schema.
+  const foodColumns = new Set((db.pragma("table_info(foods)") as { name: string }[]).map(x => x.name));
+  for (const column of ["flavors", "ingredients", "methods", "cuisines", "satiety", "mood", "avoid_tags"]) {
+    if (!foodColumns.has(column)) db.exec(`ALTER TABLE foods ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`);
+  }
+  db.transaction(() => {
+    if (db.prepare("SELECT 1 FROM site_content WHERE key = ?").get("drink_catalog_v7")) return;
+    const insert = db.prepare("INSERT INTO drinks (brand,name,kind,ingredients,avoid_tags,source_url,active) VALUES (?,?,?,?,?,?,?)");
+    // Do not overwrite a catalogue that an administrator has already created.
+    if ((db.prepare("SELECT COUNT(*) AS count FROM drinks").get() as { count: number }).count === 0) {
+      for (const drink of DRINK_CATALOG) insert.run(drink.brand, drink.name, drink.kind, drink.ingredients, drink.avoid_tags, drink.source_url, drink.active);
+    }
+    db.prepare("INSERT INTO site_content (key,value) VALUES (?,?)").run("drink_catalog_v7", "2026-10-12");
+  })();
 }
 
 /** Periodic maintenance: checkpoint WAL, clean old analytics (30+ days) */

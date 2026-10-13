@@ -11,15 +11,12 @@ export default function Header() {
   const { lang, setLang, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const links = [
+  const links: { href: string; label: string; target?: string }[] = [
     { href: "/", label: t("nav.home") },
-    { href: "/search", label: t("nav.search") },
-    { href: "/archive", label: t("nav.archive") },
+    { href: "/posts", label: t("nav.posts") },
     { href: "/games", label: t("nav.games") },
-    { href: "/tags", label: t("nav.tags") },
     { href: "/links", label: t("nav.links") },
     { href: "/about", label: t("nav.about") },
-    { href: "/feed.xml", label: t("nav.rss"), target: "_blank" },
   ];
 
   return (

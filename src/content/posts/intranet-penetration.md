@@ -1,27 +1,15 @@
 ---
-title: "内网穿透指南：没有公网 IP 也能开服"
+title: "没有公网 IP，用 frp 连到家里的服务器"
 date: "2026-06-20"
 tags: ["技术", "Minecraft", "运维"]
-description: "家庭宽带的典型场景，用 frp 把内网服务暴露到公网，开服、建站、远程访问都能用。"
+description: "分别配置云服务器上的 frps 和家里电脑上的 frpc，让外部连接转发到本地。"
+updated: "2026-10-11"
 published: true
 ---
 
-前两篇写了 MC 开服教程，有个问题没来得及说——很多人家里的宽带**没有公网 IP**。
+在家里开服时，服务端能启动、局域网也能连接，外面的朋友却连不上。除了防火墙和端口转发，还要检查宽带有没有可入站访问的公网 IP。
 
-运营商分配的是大局域网 IP（100.x.x.x 或 10.x.x.x），端口转发做了也没用，外面连不进来。这种情况就需要内网穿透。
-
-常见的方案有这么几种：
-
-| 方案 | 速度 | 费用 | 难度 |
-|------|------|------|------|
-| **frp** | ⭐⭐⭐⭐ | 需要一台云服务器 | ⭐⭐ |
-| **Tailscale** | ⭐⭐⭐ | 免费 | ⭐ |
-| **Ngrok** | ⭐⭐ | 免费版有限制 | ⭐ |
-| **SakuraFrp** | ⭐⭐⭐ | 免费有流量限制 | ⭐ |
-
-最推荐的是 **frp**——稳定、快、自己掌控。前提是你有一台云服务器。没有的话可以去搞个最便宜的乞丐版，1 核 1G 就够跑了。
-
-本文以 frp 为例。
+这篇用 frp 做转发：云服务器运行 frps，家里电脑运行 frpc，朋友通过云服务器的地址连接。
 
 ## frp 是什么
 
@@ -59,9 +47,11 @@ cd frp_0.61.0_linux_amd64
 
 ```toml
 bindPort = 7000
+auth.method = "token"
+auth.token = "替换成你自己生成的长随机字符串"
 ```
 
-就一行。`bindPort` 是 frp 的控制端口，你家电脑通过这个端口连上来。
+`bindPort` 是控制端口。两端填写相同的鉴权 token，示例中的占位文字必须替换。
 
 然后启动：
 
@@ -69,7 +59,7 @@ bindPort = 7000
 ./frps -c frps.toml
 ```
 
-看到 `service started` 就成功了。
+日志出现 `service started` 后，再检查客户端是否能连接。
 
 如果你想长期运行，建议配成 systemd 服务：
 
@@ -106,6 +96,8 @@ sudo systemctl enable --now frps
 ```toml
 serverAddr = "你的云服务器公网IP"
 serverPort = 7000
+auth.method = "token"
+auth.token = "替换成你自己生成的长随机字符串"
 
 [[proxies]]
 name = "mc-server"
@@ -127,7 +119,7 @@ remotePort = 25565
 # Linux
 ./frpc -c frpc.toml
 
-# Windows 双击 frpc.exe（或者 cmd 里运行）
+# Windows：在终端运行
 frpc.exe -c frpc.toml
 ```
 
@@ -151,6 +143,8 @@ frp 支持同时映射多个端口。比如你又要开 MC 又要开网站：
 ```toml
 serverAddr = "你的云服务器公网IP"
 serverPort = 7000
+auth.method = "token"
+auth.token = "替换成你自己生成的长随机字符串"
 
 [[proxies]]
 name = "mc-server"
@@ -184,23 +178,17 @@ remotePort = 8080
 
 ## frp 的一些注意点
 
-- **免费云服务器可能没有公网 IP。** 买的时候看清是不是「弹性公网 IP」，阿里云/腾讯云最便宜的轻量服务器一般都有
-- **流量走云服务器。** 你云服务器的带宽决定了所有人的体验。1Mbps 带宽只够 1-2 人玩 MC，3-4 人的话建议 5Mbps 以上
-- **frp 本身几乎不占资源。** 1 核 512M 的服务器跑 frps 带几个人完全没问题
+- **流量经过云服务器。** 实际体验受云端带宽、家庭上传速度和延迟影响，人数不能仅按标称带宽估算。
 - **Windows 上建议把 frpc 注册成服务。** 用 `nssm` 工具，这样开机自启、后台运行，不用一直开着 cmd 窗口
 - **frp 支持加密和压缩。** 在 `frpc.toml` 的 `[[proxies]]` 里加两行：
   ```toml
   transport.useEncryption = true
   transport.useCompression = true
   ```
-  会消耗一点 CPU，但能省带宽。
+  是否开启压缩要看流量类型，已压缩的数据通常收益不大。
 
 ---
 
-其他方案简单说两句：
+连接失败时，可以记录服务端、客户端的报错和端口配置，再逐项排查。
 
-- **Tailscale** 最适合**几个人自己玩**。装了就完事，不需要云服务器。缺点是朋友也得装 Tailscale，不是直接连 IP
-- **SakuraFrp** 国内有免费节点，注册即用，适合不想折腾服务器的。但免费版速度和稳定性看运气
-- **Ngrok** 国外服务，国内延迟高，不太推荐
-
-有什么问题评论区问。
+鉴权字段参考：[frp 官方文档](https://gofrp.org/en/docs/features/common/authentication/)。

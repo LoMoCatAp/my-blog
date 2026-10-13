@@ -72,10 +72,10 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  if (!post) return { title: "404 - Not Found" };
+  if (!post || !post.published) return { title: "文章未找到" };
   const cover = post.image || getCoverImage(slug);
   return {
-    title: `${post.title} - LomoCat's Blog`,
+    title: post.title,
     description: post.description,
     openGraph: {
       title: post.title,
@@ -94,7 +94,7 @@ export default async function PostPage({
 }) {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  if (!post) notFound();
+  if (!post || !post.published) notFound();
 
   // Record view
   const db = getDb();
@@ -158,18 +158,7 @@ export default async function PostPage({
             </svg>
             {readTime} 分钟
           </span>
-          {post.tags.length > 0 && (
-            <div className="flex gap-2">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-orange-200 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded-full text-xs font-medium"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+
         </div>
 
         {/* Content */}

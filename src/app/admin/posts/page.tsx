@@ -129,6 +129,7 @@ export default function AdminPostsPage() {
           >
             🍽️ 美食
           </Link>
+          <Link href="/admin/drinks" className="px-4 py-2 rounded-lg border border-[var(--border)] text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-all">饮品</Link>
           <button
             onClick={handleRebuild}
             disabled={building}

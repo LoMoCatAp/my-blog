@@ -1,0 +1,29 @@
+.page { padding:12px 0 44px; color:var(--text); }
+.page>h1 { font-size:28px; font-weight:600; margin:0 0 28px; letter-spacing:-.5px; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.track { min-width:0; perspective:900px; }
+.card { --game-amber:#f8ddba; --game-green:#d8e9df; --game-berry:#eadeee; --game-shadow:#70563a20; display:block; border-radius:18px; color:var(--text); outline-offset:5px; }
+:global(html.dark) .card { --game-amber:#483222; --game-green:#243d33; --game-berry:#302534; --game-shadow:#0005; }
+.surface { position:relative; border:1px solid var(--border); border-radius:inherit; overflow:hidden; isolation:isolate; box-shadow:0 12px 26px var(--game-shadow); transform:perspective(900px) rotateX(var(--project-tilt-x,0deg)) rotateY(var(--project-tilt-y,0deg)); transition:transform .15s ease-out,box-shadow .3s; }
+.food .surface { background:radial-gradient(ellipse at 10% 5%,var(--game-amber),transparent 72%),linear-gradient(150deg,var(--card),var(--game-berry)); }
+.mahjong .surface { background:radial-gradient(ellipse at 85% 8%,var(--game-green),transparent 70%),linear-gradient(150deg,var(--card),var(--game-berry)); }
+.art { height:208px; display:grid; place-items:center; position:relative; }
+.art img { width:148px; height:148px; object-fit:contain; transform:rotate(-9deg); transition:transform .5s cubic-bezier(.2,.8,.2,1); }
+.copy { padding:0 24px 26px; }
+.kicker { display:block; font-size:11px; letter-spacing:2px; color:var(--accent-dark); margin-bottom:8px; }
+.title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:11px; }
+.title h2 { font-size:22px; font-weight:600; margin:0; letter-spacing:-.4px; }
+.title svg { color:var(--text-muted); flex:none; }
+.copy p { font-size:13px; color:var(--text-muted); margin:0; line-height:1.65; }
+.copy .stack { color:var(--accent-dark); font-size:12px; margin-bottom:6px; }
+.tiles { position:relative; width:180px; height:130px; }
+.tiles span { position:absolute; top:17px; left:58px; display:grid; place-items:center; width:65px; height:90px; border-radius:9px; color:#24654a; background:linear-gradient(145deg,#fff9eb,#e4e4d8); box-shadow:5px 7px 0 #719a84,10px 15px 24px var(--game-shadow); font:500 32px/1 Georgia,"Microsoft YaHei",serif; transform:rotate(-16deg) translate(-42px,-8px); transition:transform .5s cubic-bezier(.2,.8,.2,1); }
+.tiles span:nth-child(2) { transform:rotate(8deg) translate(5px,7px); }
+.tiles span:nth-child(3) { color:#a13537; transform:rotate(24deg) translate(48px,-4px); }
+.glow { position:absolute; inset:0; z-index:2; pointer-events:none; opacity:0; background:radial-gradient(ellipse at var(--project-glow-x,50%) var(--project-glow-y,40%),#fff3,transparent 65%); transition:opacity .2s; }
+.card[data-hovered=true] .glow,.card:focus-visible .glow { opacity:1; }
+.card:focus-visible { outline:2px solid var(--accent-dark); }
+@media(hover:hover) { .card[data-hovered=true] .surface { box-shadow:0 22px 35px var(--game-shadow); } .card:hover img,.card:focus-visible img { transform:translateY(-7px) rotate(4deg); } .card:hover .tiles span:first-child { transform:rotate(-23deg) translate(-47px,-15px); } .card:hover .tiles span:last-child { transform:rotate(29deg) translate(52px,-9px); } }
+@media(max-width:600px) { .grid { grid-template-columns:minmax(0,1fr); gap:20px; } .art { height:184px; } .page>h1 { font-size:26px; } }
+@media(hover:none),(pointer:coarse) { .card:active .surface { transform:translateY(-3px) rotateX(3deg); } .card:active .art img { transform:translateY(-6px) rotate(4deg); } }
+@media(prefers-reduced-motion:reduce) { .surface,.card:active .surface { transform:none!important; transition:none; } .art img,.tiles span { transition:none; } .glow { transition:none; } }

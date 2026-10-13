@@ -1,28 +1,29 @@
 ---
-title: "从零搭一个 Minecraft Java 版服务器"
+title: "搭一个 Minecraft Java 版服务器"
 date: "2026-06-20"
 tags: ["技术", "Minecraft", "游戏"]
-description: "Java 版开服完整指南，从下载到配置到让朋友连进来，没有废话。"
+description: "准备 Java 环境，启动服务端，配置服务器和插件，再让朋友连接。"
+updated: "2026-10-11"
 published: true
 ---
 
-上次写了基岩版的开服教程，这次补上 Java 版的。
+接着基岩版开服笔记，这篇整理 Java 版的步骤。
 
-Java 版服务器比基岩版成熟得多，插件生态丰富，性能优化空间也大。但也比基岩版麻烦一点——你得装 Java。
+先准备与目标版本匹配的 Java 环境，再启动服务端。插件和外部连接放在后面处理。
 
 ## 你需要什么
 
 - **一台能长时间开着的电脑**（Windows / Linux / macOS 都行）
-- **Java 21 或以上**（推荐用 **JDK 21 LTS**，不要用 Java 8）
+- **Java 21**（本文以 Paper 1.21.3 为例，其他版本查对应要求）
 - **端口 25565**（TCP，Java 版默认端口）
 
-配置方面，Java 版比基岩版吃资源一些。对于原版，2 人玩 2G 内存就够了，5-8 人建议 4G。如果是模组服务器，要视模组的数量和人数来定。
+内存用量受视距、地图生成、插件和人数影响。下面脚本只是配置示例，最大堆内存要为系统留出余量。
 
 ## 装 Java
 
 ### Windows
 
-去 https://adoptium.net 下载 **JDK 21 LTS**，安装包一路下一步就行。装完打开 cmd 验证：
+去 https://adoptium.net 下载 **JDK 21 LTS**，安装时留意 Java 版本与环境变量设置。装完打开 cmd 验证：
 
 ```
 java -version
@@ -42,19 +43,19 @@ sudo yum install java-21-openjdk
 
 ## 下载服务端
 
-去 https://mcversions.net 找到你要的版本。
+从[官方服务端页面](https://www.minecraft.net/en-us/download/server)或 [Paper 官网](https://papermc.io/downloads/paper)下载所需版本，避免混用服务端与客户端版本。
 
 几个主流选择：
 
 | 服务端 | 特点 |
 |--------|------|
-| **Vanilla**（官方原版） | Mojang 官方，最纯净 |
-| **Paper** | 性能最好，插件兼容性高，**最推荐** |
-| **Spigot** | Paper 的前身，插件多但性能不如 Paper |
+| **Vanilla**（官方原版） | 官方服务端 |
+| **Paper** | 支持插件，提供性能与配置调整选项 |
+| **Spigot** | 支持 Bukkit/Spigot 插件 |
 | **Fabric** | 玩模组的话选这个 |
-| **Forge** | 老牌模组加载器，模组最多但性能一般 |
+| **Forge** | 根据模组所需的加载器和版本选择 |
 
-如果是纯生存服，直接下 **Paper** 就行。下载后得到一个 `.jar` 文件，比如 `paper-1.21.3.jar`。
+如果需要插件，可以考虑 **Paper**；仅需要原版行为时，也可选择官方服务端。下载后得到一个 `.jar` 文件，比如 `paper-1.21.3.jar`。
 
 ## 启动服务器
 
@@ -78,7 +79,7 @@ java -Xms2G -Xmx4G -jar paper-1.21.3.jar nogui
 
 第一次启动会生成配置文件，然后自动退出。这是因为你需要先同意 EULA：
 
-打开生成的 `eula.txt`，把 `eula=false` 改成 `eula=true`，保存。
+打开生成的 `eula.txt`，阅读文件中的协议链接，同意后把 `eula=false` 改成 `eula=true`，保存。
 
 再启动一次，这次应该能看到：
 
@@ -105,10 +106,10 @@ gamemode=survival
 # 难度 peaceful / easy / normal / hard
 difficulty=normal
 
-# 正版验证（建议开着，防熊孩子）
+# 正版验证
 online-mode=true
 
-# 视距（别超过 8，会卡）
+# 视距，按实际负载调整
 view-distance=8
 ```
 
@@ -116,18 +117,18 @@ view-distance=8
 
 Paper 和 Spigot 支持插件。去 https://hangar.papermc.io 或 https://www.spigotmc.org/resources 下载 `.jar` 文件，丢进 `plugins/` 文件夹，重启服务器。
 
-推荐几个插件：
+按用途选择插件：
 
 | 插件 | 用途 |
 |------|------|
 | **EssentialsX** | 基础管理命令 |
 | **LuckPerms** | 权限管理 |
-| **CoreProtect** | 方块回滚，查谁偷了东西 |
+| **CoreProtect** | 方块回滚，查询方块操作记录 |
 | **GSit** | 可以坐下/躺下/趴下 |
 | **Multiverse-Core** | 多世界管理 |
 | **BlueMap** | 网页端地图查看 |
 
-不用一次装太多，先跑起来再说。
+先确认基础服务端能正常连接，再逐个添加插件，便于定位冲突。
 
 ## 端口转发
 
@@ -159,10 +160,11 @@ Paper 和 Spigot 支持插件。去 https://hangar.papermc.io 或 https://www.sp
 
 ## 几个小技巧
 
-- **开服之前先确定版本。** 1.20.x 和 1.21.x 的存档不互通，朋友们的客户端版本也得一致
-- **定期备份。** 备份 `world/` 文件夹就行。设置个定时任务每天压缩打包一次
-- **不要给太多人 OP。** OP 能执行任何指令，给错人一晚就能拆光你的服务器
-- **开服第一次进游戏会卡一下。** 那是地图生成，等几秒就好
+- **开服之前先确定版本。** 服务端和客户端版本要匹配。升级可能改动存档格式，升级前备份，不要直接尝试降级原存档
+- **定期备份。** 停服后备份所有世界目录、配置和插件数据；有多世界插件时也要包含额外世界。定期检查备份能否恢复
+- **不要给太多人 OP。** OP 能执行任何指令，应只授予需要管理权限的人
 - **如果服务器越来越卡，装个 `spark` 插件**，输入 `/spark profiler` 就能看到哪出了问题
 
 ---
+
+Java 版本对应关系参考：[Paper 安装文档](https://docs.papermc.io/paper/getting-started/)。

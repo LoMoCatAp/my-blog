@@ -8,22 +8,12 @@ export interface SiteContent {
 }
 
 const DEFAULTS: SiteContent = {
-  heroTitle: "LomoCat 的猫窝",
-  heroSubtitle: "写写代码，写写文字。",
-  aboutContent: `## 🐱 关于我
+  heroTitle: "你好，我是洛陌。",
+  heroSubtitle: "做全栈开发，也做自己的项目。",
+  aboutContent: `我是洛陌，也叫 Lomo。
 
-我是 **洛陌（Lomo）**，一只写代码的猫。
-
-这个博客是我自己从零搭的，用 Next.js + SQLite + Markdown，服务器跑在阿里云上。
-
-## 📮 联系我
-
-- GitHub: [github.com/lomocat](https://github.com)
-- 博客: [lomocat.xyz](https://lomocat.xyz)
-
----
-
-*猫窝建造于 2026 年 6 月 · 持续进化中 🚀*`,
+GitHub：[LoMoCatAp](https://github.com/LoMoCatAp)  
+博客：[lomocat.xyz](https://lomocat.xyz/)`,
   footerText: "© 2026 LomoCat",
 
 };

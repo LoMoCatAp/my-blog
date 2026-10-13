@@ -1,14 +1,15 @@
 ---
-title: "MC 聊天栏排版指南：/tellraw 详解"
+title: "用 /tellraw 排版聊天消息"
 date: "2026-06-21"
 tags: ["技术", "Minecraft", "游戏"]
-description: "tellraw 能做的不只是发条消息。用 raw JSON 做排版、hover 预览、点击跳转——基岩版和 Java 版的语法都在这篇里。"
+description: "分别整理 Java 版文本组件和基岩版 rawtext 的写法。"
+updated: "2026-10-11"
 published: true
 ---
 
-`/tellraw` 是用来发消息的，但它发的不是普通消息——是 JSON 格式的富文本消息。
+`/tellraw` 用文本组件发送消息。Java 版与基岩版的结构不同，下面分开写，避免把一个版本的语法直接复制到另一个版本。
 
-跟 `/say` 和 `/msg` 的区别：`/say` 只能发纯文本，`/tellraw` 可以控制颜色、字体、加粗、斜体，还能让玩家点击文字时执行指令或悬浮时显示提示。
+Java 版示例按 1.21.4 的 JSON 文本组件格式书写。1.21.5 起改为 SNBT，并调整了交互事件字段，使用新版时请看[官方变更说明](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-21-5)。基岩版部分使用 `rawtext`。
 
 ## 基础语法
 
@@ -26,7 +27,7 @@ published: true
 
 ### 基岩版
 
-基岩版的语法多了个 `from` 参数（消息来源）：
+基岩版在目标后直接接 `rawtext` JSON：
 
 ```
 /tellraw <目标> <raw JSON>
@@ -46,7 +47,7 @@ published: true
 /tellraw @a "这是一段纯文本"
 ```
 
-最简单的方式，直接写字符串。但不推荐，因为没法指定颜色。
+仅发送文字时可使用字符串；需要颜色或格式时使用对应版本的文本组件。
 
 ### 带颜色的文本
 
@@ -96,20 +97,12 @@ published: true
 
 ## Java 版：hover 与 click
 
-这是 `/tellraw` 最实用的功能。
+以下交互事件用于 Java 版文本组件。
 
 ### hoverEvent（鼠标悬停显示）
 
 ```
 /tellraw @a {"text":"悬停我","hoverEvent":{"action":"show_text","contents":"这是一段提示文字"}}
-```
-
-```
-/tellraw @a {"text":"查看物品","hoverEvent":{"action":"show_item","contents":"{id:\"minecraft:diamond\",count:1}"}}
-```
-
-```
-/tellraw @a {"text":"查看实体","hoverEvent":{"action":"show_entity","contents":{"name":"Steve","type":"minecraft:player","id":"..."}}}
 ```
 
 ### clickEvent（点击触发）
@@ -134,39 +127,12 @@ hover 和 click 可以同时用：
 
 ```
 /tellraw @a {
-  "text":"[传送]",
+  "text":"[在线玩家]",
   "color":"green",
   "bold":true,
-  "hoverEvent":{"action":"show_text","contents":"点击传送到出生点"},
-  "clickEvent":{"action":"run_command","value":"/spawn"}
+  "hoverEvent":{"action":"show_text","contents":"查看在线玩家"},
+  "clickEvent":{"action":"run_command","value":"/list"}
 }
-```
-
-## Java 版：完整示例
-
-一个带标题和按钮的排版：
-
-```
-/tellraw @a {"text":"\n"}
-/tellraw @a {"text":" ╔══════════════════╗","color":"dark_gray"}
-/tellraw @a {"text":" ║ ","color":"dark_gray","extra":[
-  {"text":"服务器菜单","color":"gold","bold":true},
-  {"text":"                ║","color":"dark_gray"}
-]}
-/tellraw @a {"text":" ╠══════════════════╣","color":"dark_gray"}
-/tellraw @a {"text":" ║ ","color":"dark_gray","extra":[
-  {"text":"[🎮 传送大厅]","color":"aqua","hoverEvent":{"action":"show_text","contents":"点击传送到大厅"},"clickEvent":{"action":"run_command","value":"/warp大厅"}},
-  {"text":"      ║","color":"dark_gray"}
-]}
-/tellraw @a {"text":" ║ ","color":"dark_gray","extra":[
-  {"text":"[⚔️ 小游戏]","color":"green","hoverEvent":{"action":"show_text","contents":"点击查看小游戏列表"},"clickEvent":{"action":"run_command","value":"/games"}},
-  {"text":"        ║","color":"dark_gray"}
-]}
-/tellraw @a {"text":" ║ ","color":"dark_gray","extra":[
-  {"text":"[📦 领取奖励]","color":"gold","hoverEvent":{"action":"show_text","contents":"每日奖励"},"clickEvent":{"action":"run_command","value":"/reward"}},
-  {"text":"      ║","color":"dark_gray"}
-]}
-/tellraw @a {"text":" ╚══════════════════╝","color":"dark_gray"}
 ```
 
 ## 基岩版：rawtext 数组
@@ -177,7 +143,7 @@ hover 和 click 可以同时用：
 /tellraw @a {"rawtext":[{"text":"§c红色 §a绿色 §b蓝色"}]}
 ```
 
-基岩版可以用 `§` 颜色代码（Java 版也可以，但 JSON 形式更推荐）：
+基岩版可以在文本中使用 `§` 颜色和格式代码：
 
 | 代码 | 颜色 |
 |------|------|
@@ -188,10 +154,9 @@ hover 和 click 可以同时用：
 | `§c` | 亮红 |
 | `§e` | 黄色 |
 | `§l` | 加粗 |
-| `§n` | 下划线 |
 
 ```
-/tellraw @a {"rawtext":[{"text":"§l§6服务器公告\n"},{"text":"§7欢迎来到 §b生存世界 §7！\n"},{"text":"§a[点击进入]","clickEvent":{"action":"run_command","value":"/warp生存"}}]}
+/tellraw @a {"rawtext":[{"text":"§l§6服务器公告\n"},{"text":"§7欢迎来到 §b生存世界 §7！\n"},{"text":"§a祝你玩得开心！"}]}
 ```
 
 ### 基岩版：selector 和 score
@@ -215,42 +180,29 @@ hover 和 click 可以同时用：
 
 显示玩家的 kills 计分板分数。
 
-### 基岩版：clickEvent
-
-基岩版同样支持 `clickEvent`：
-
-```
-/tellraw @a {"rawtext":[
-  {"text":"[传送] ","color":"green"},
-  {"text":"[商店]","color":"gold","clickEvent":{"action":"run_command","value":"/shop"}}
-]}
-```
-
 ## 版本对比
 
 | 功能 | Java 版 | 基岩版 |
 |------|---------|--------|
 | JSON 结构 | `{"text":"..."}` | `{"rawtext":[{"text":"..."}]}` |
 | extra 数组 | ✅ | ❌（用 rawtext 代替） |
-| 颜色代码 `§` | ✅ | ✅ |
+| 颜色设置 | `color` 字段 | 文本内的 `§` 代码 |
 | `selector` | ✅ | ✅ |
 | `score` | ✅ | ✅ |
 | `hoverEvent` | ✅ | ❌ |
-| `clickEvent` | ✅ | ✅ |
+| 点击事件 | ✅ | ❌ |
 | `open_url` | ✅ | ❌ |
 | `suggest_command` | ✅ | ❌ |
 
-主要区别：基岩版不支持 `hoverEvent`，不支持 `open_url` 和 `suggest_command`，但基础的 `run_command` 和颜色代码是通用的。
+基岩版 `rawtext` 不支持 Java 文本组件里的点击和悬停事件。
 
-## 一些技巧
+## 写长消息时
 
-- **太长分多条发。** `/tellraw` 没有长度限制，但聊天框一次显示太长会被截断，可以拆成多个 `/tellraw`
-- **记住转义引号。** 在命令方块或函数文件里写 JSON 时，内部引号要用 `\"` 转义
-- **基岩版用 `§` 更省事。** 写 `rawtext` 数组比 Java 版的嵌套结构简单很多，能用 `§` 解决的就不用写一大堆 JSON
-- **函数文件里更好维护。** 长的 tellraw 放在 `.mcfunction` 文件里写，比在游戏里手打方便
-- **先写 JSON 再转成一行。** 用在线 JSON 格式化器写好结构，压缩成一行再塞进指令
-- **Java 版的 `tellraw` 生成器网上有很多。** 搜索 Minecraft tellraw generator，可以可视化编辑
+先检查结构，再把示例整理成一条命令。JSON 字符串里面的双引号需要转义，结构本身的引号不用全部加反斜杠。放进 `.mcfunction` 时，一条指令占一行，并去掉开头的 `/`。
 
+消息较长时分条发送，逐条测试颜色、选择器和分数。
 ---
 
-最后补一句：`/tellraw` 和 `/title` 用同一套 JSON 格式。学会了 tellraw，title 也就自然会了。
+需要在屏幕标题中显示文本时，再核对对应版本的 `/title` 或 `/titleraw` 格式。
+
+基岩版结构参考：[官方 Raw Message JSON 文档](https://learn.microsoft.com/en-us/minecraft/creator/reference/content/rawmessagejson)。

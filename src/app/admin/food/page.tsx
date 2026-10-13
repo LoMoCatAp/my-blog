@@ -142,7 +142,7 @@ export default function AdminFoodPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-[var(--text)]">🍽️ 美食管理</h1>
-        <Link href="/admin/posts" className="text-sm text-[var(--accent)] hover:underline">← 返回</Link>
+        <div className="flex gap-4 text-sm text-[var(--accent)]"><Link href="/admin/drinks" className="hover:underline">饮品管理</Link><Link href="/admin/posts" className="hover:underline">← 返回</Link></div>
       </div>
 
       {/* Add form */}
